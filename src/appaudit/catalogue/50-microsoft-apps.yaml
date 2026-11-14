@@ -8,7 +8,7 @@ switches:
     detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: DiagnosticData, private: 0}
-    expect: {processes: [msedge.exe], domains: [browser.events.data.msn.com, events.data.microsoft.com]}
+    expect: {processes: [msedge.exe], process_domains: [events.data.msn.com, events.data.microsoft.com]}
   - id: edge.personalisation
     title: Edge personalisation from browsing history
     explain: Lets Microsoft use your browsing history to personalise ads, search and news.
@@ -69,7 +69,6 @@ switches:
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: StartupBoostEnabled, private: 0}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: BackgroundModeEnabled, private: 0}
-    expect: {processes: [msedge.exe]}
   - id: office.telemetry
     title: Office telemetry
     explain: Office apps send usage and diagnostic data to Microsoft.

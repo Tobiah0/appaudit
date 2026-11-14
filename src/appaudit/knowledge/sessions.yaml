@@ -1,0 +1,48 @@
+# Trace sessions commonly found running on Windows 11. Matched by name prefix, longest first.
+# kind: windows | security | telemetry | update | vendor | this-tool
+- {prefix: appaudit-, owner: This tool, kind: this-tool, what: The watcher you started. It records network activity and program starts into a database on this PC.}
+- {prefix: PktMon, owner: This tool or an administrator, kind: this-tool, what: 'The built-in Packet Monitor. This tool uses it to read DNS answers.'}
+- {prefix: Eventlog-, owner: Windows, kind: windows, what: Feeds the Windows event logs you can read in Event Viewer.}
+- {prefix: EventLog-, owner: Windows, kind: windows, what: Feeds the Windows event logs you can read in Event Viewer.}
+- {prefix: Circular Kernel Context Logger, owner: Windows, kind: windows, what: A small rolling record of kernel activity kept for crash analysis.}
+- {prefix: NT Kernel Logger, owner: Windows or a diagnostic tool, kind: windows, what: The classic kernel trace. Performance tools start it.}
+- {prefix: DiagLog, owner: Windows, kind: windows, what: 'Feeds the Diagnostic Policy Service, which detects and troubleshoots problems locally.'}
+- {prefix: WdiContextLog, owner: Windows, kind: windows, what: Context for Windows' built-in troubleshooting.}
+- {prefix: NtfsLog, owner: Windows, kind: windows, what: File-system diagnostics.}
+- {prefix: ReFSLog, owner: Windows, kind: windows, what: File-system diagnostics.}
+- {prefix: FilterMgr-Logger, owner: Windows, kind: windows, what: File-system filter diagnostics.}
+- {prefix: CimFSUnionFS-Filter, owner: Windows, kind: windows, what: Diagnostics for the file system used by containers and app packages.}
+- {prefix: CldFltLog, owner: Windows, kind: windows, what: Diagnostics for cloud file placeholders (OneDrive files on demand).}
+- {prefix: UBPM, owner: Windows, kind: windows, what: The broker that starts services and tasks on triggers.}
+- {prefix: LwtNetLog, owner: Windows, kind: windows, what: Low-volume networking diagnostics kept for troubleshooting.}
+- {prefix: NetCore, owner: Windows, kind: windows, what: Core networking diagnostics kept for troubleshooting.}
+- {prefix: RadioMgr, owner: Windows, kind: windows, what: Diagnostics for Wi-Fi and Bluetooth radio switches.}
+- {prefix: WiFi, owner: Windows, kind: windows, what: Wi-Fi diagnostics kept for troubleshooting.}
+- {prefix: SleepStudy, owner: Windows, kind: windows, what: Records sleep and battery behaviour for the Sleep Study report.}
+- {prefix: ScreenOnPowerStudy, owner: Windows, kind: windows, what: Records power use while the screen is on.}
+- {prefix: Microsoft-Windows-Rdp-Graphics, owner: Windows, kind: windows, what: Remote Desktop display driver diagnostics.}
+- {prefix: GraphicsPerfMonitorSession, owner: Windows, kind: windows, what: Graphics performance monitoring.}
+- {prefix: Mellanox, owner: Windows, kind: windows, what: Network adapter driver diagnostics.}
+- {prefix: MpWpp, owner: Microsoft Defender, kind: security, what: Defender's own diagnostic log.}
+- {prefix: DefenderApiLogger, owner: Microsoft Defender, kind: security, what: Lets Defender watch sensitive system calls to detect malware.}
+- {prefix: DefenderAuditLogger, owner: Microsoft Defender, kind: security, what: Defender audit events.}
+- {prefix: SenseNdr, owner: Microsoft Defender, kind: security, what: Defender network detection.}
+- {prefix: WINNETESP, owner: Windows (owner process not confirmed), kind: security, what: 'Receives web requests made through Windows'' own HTTP libraries, including addresses. Its purpose is not documented.'}
+- {prefix: Diagtrack-Listener, owner: Windows telemetry service, kind: telemetry, what: The stream of events that the Connected User Experiences and Telemetry service collects for upload to Microsoft.}
+- {prefix: Autologger-Diagtrack-Listener, owner: Windows telemetry service, kind: telemetry, what: The boot-time part of Windows telemetry collection.}
+- {prefix: AutoLogger-Diagtrack-Listener, owner: Windows telemetry service, kind: telemetry, what: The boot-time part of Windows telemetry collection.}
+- {prefix: 1DSListener, owner: A Microsoft component (not confirmed which), kind: telemetry, what: '"1DS" is Microsoft''s telemetry client library. This session listens for events to hand to it.'}
+- {prefix: UQI_, owner: Windows Health and Optimized Experiences service, kind: telemetry, what: '"Usage and Quality Insights": records usage and performance data into log files on this PC. Whether and when they are uploaded is disputed.'}
+- {prefix: WinDiag-Realtime-Session, owner: Windows diagnostics, kind: telemetry, what: A real-time diagnostic stream that includes program starts. Which service consumes it is not documented.}
+- {prefix: SQMLogger, owner: Windows, kind: telemetry, what: The Customer Experience Improvement Program logger.}
+- {prefix: UpdateSessionOrchestration, owner: Windows Update, kind: update, what: Windows Update's own log.}
+- {prefix: MoUxCoreWorker, owner: Windows Update, kind: update, what: Windows Update's own log.}
+- {prefix: MoUsoCoreWorker, owner: Windows Update, kind: update, what: Windows Update's own log.}
+- {prefix: SetupPlatform, owner: Windows Setup, kind: update, what: Logs from Windows setup and upgrades.}
+- {prefix: GamingServices, owner: Xbox Gaming Services, kind: vendor, what: Diagnostics for Xbox and Game Pass services.}
+- {prefix: Steam Event Tracing, owner: Steam (Valve), kind: vendor, what: 'Steam subscribes to Windows'' process events, so it is told about programs starting and stopping on this PC.'}
+- {prefix: NVIDIA-, owner: NVIDIA, kind: vendor, what: NVIDIA's performance and overlay monitoring.}
+- {prefix: NvTelemetry, owner: NVIDIA, kind: vendor, what: NVIDIA telemetry collection.}
+- {prefix: AMD, owner: AMD, kind: vendor, what: AMD software diagnostics.}
+- {prefix: Intel, owner: Intel, kind: vendor, what: Intel software diagnostics.}
+- {prefix: Corsair, owner: Corsair, kind: vendor, what: Corsair software diagnostics.}

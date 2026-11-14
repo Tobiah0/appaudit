@@ -18,7 +18,7 @@ import win32security
 
 from . import PIPE_NAME
 
-BUFFER = 65536
+BUFFER = 1 << 20
 
 
 def current_user_sid() -> str:
@@ -80,8 +80,13 @@ def send(command: dict, name: str = PIPE_NAME, timeout_ms: int = 4000) -> dict:
     try:
         win32pipe.SetNamedPipeHandleState(handle, win32pipe.PIPE_READMODE_MESSAGE, None, None)
         win32file.WriteFile(handle, json.dumps(command).encode("utf-8"))
-        _status, raw = win32file.ReadFile(handle, BUFFER)
-        return json.loads(raw.decode("utf-8"))
+        chunks = []
+        while True:                                     # a reply larger than the buffer arrives in parts
+            status, raw = win32file.ReadFile(handle, BUFFER)
+            chunks.append(raw)
+            if status != 234:                           # ERROR_MORE_DATA
+                break
+        return json.loads(b"".join(chunks).decode("utf-8"))
     except pywintypes.error as error:
         raise ConnectionError(f"the helper did not answer: {error}") from error
     finally:

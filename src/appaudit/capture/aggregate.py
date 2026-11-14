@@ -133,7 +133,7 @@ class Aggregator:
         self._names: dict[tuple, list] = {}
         self._lookups: dict[tuple, list] = {}
         self._requests: dict[tuple, list] = {}
-        self._tasks: dict[int, str] = {}
+        self._tasks: dict[int, tuple[str, float]] = {}
         self.counts = {"events": 0, "net": 0, "dns": 0, "http": 0, "proc": 0, "packets": 0, "names_from_packets": 0}
 
     # -- tracing thread ---------------------------------------------------------------
@@ -158,11 +158,12 @@ class Aggregator:
             elif provider == decode.P_TASKS:
                 launch = decode.task_launch(event)
                 if launch and launch.pid:
-                    self._tasks[launch.pid] = launch.task
                     row = self.procs.by_pid.get(launch.pid)
-                    if row is not None:
+                    if row is not None and when - row["started"] < 30:
                         row["task"] = launch.task
                         self.procs.dirty.append(row)
+                    else:                     # the process start has not arrived yet; hold briefly
+                        self._tasks[launch.pid] = (launch.task, when)
 
     def _network(self, event: Event, when: float) -> None:
         net = decode.network(event)
@@ -218,9 +219,9 @@ class Aggregator:
         if start is not None:
             self.counts["proc"] += 1
             row = self.procs.started(start, when)
-            task = self._tasks.pop(start.pid, None)
-            if task:
-                row["task"] = task
+            pending = self._tasks.pop(start.pid, None)
+            if pending and when - pending[1] < 10:        # process ids are reused; only trust a fresh match
+                row["task"] = pending[0]
             return
         pid = decode.process_stop(event)
         if pid is not None:

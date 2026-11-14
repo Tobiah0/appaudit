@@ -12,9 +12,7 @@ switches:
     note: This lowers the level. To stop Required data on Home, disable the telemetry service below.
     source: https://learn.microsoft.com/en-us/windows/privacy/configure-windows-diagnostic-data-in-your-organization
     checks:
-      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: AllowTelemetry, private: [1, 0]}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection', value: AllowTelemetry, private: [1, 0], default: 3}
-    expect: {services: [DiagTrack], domains: [events.data.microsoft.com, vortex.data.microsoft.com]}
   - id: win.limit-diagnostic-logs
     title: Diagnostic log and crash dump collection
     explain: Microsoft can request extra log files and memory dumps from this PC on top of normal diagnostic data.

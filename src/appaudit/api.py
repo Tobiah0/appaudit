@@ -225,6 +225,57 @@ def post_switch_undo(entry_id: int) -> dict:
     return result
 
 
+# --- proof, Windows telemetry, trace sessions ---------------------------------------------------
+
+@app.get("/api/proof")
+def get_proof(hours: float = 24) -> dict:
+    from . import proof
+
+    return cached(("proof", hours), 20, lambda: proof.report(min(max(hours, 1), 24 * 30)))
+
+
+def _helper_read(command: str, **extra) -> dict:
+    from .helper import pipe
+
+    try:
+        reply = pipe.send({"cmd": command, **extra}, timeout_ms=60000)
+    except ConnectionError:
+        return {"available": False, "reason": "Start watching to read this; it needs administrator rights."}
+    if not reply.get("ok"):
+        return {"available": False, "reason": reply.get("error", "the helper refused")}
+    return {"available": True, **reply}
+
+
+@app.get("/api/windows-telemetry")
+def get_windows_telemetry() -> dict:
+    from . import proof, switches
+
+    def build() -> dict:
+        catalogue = switches.load_catalogue()
+        services = [switches.state(catalogue[item]) for item in ("svc.diagtrack", "svc.whesvc", "svc.wer", "svc.inventory")]
+        return {"counters": proof.upload_counters(), "services": services, "details": _helper_read("windows_telemetry")}
+
+    return cached(("wintel",), 30, build)
+
+
+@app.get("/api/windows-telemetry/events")
+def get_transcript() -> dict:
+    return _helper_read("transcript", limit=300)
+
+
+@app.get("/api/listeners")
+def get_listeners() -> dict:
+    from .explain import sessions
+
+    def build() -> dict:
+        reply = _helper_read("trace_sessions")
+        if reply.get("available"):
+            reply["sessions"] = [sessions.describe(item) for item in reply["sessions"]]
+        return reply
+
+    return cached(("listeners",), 60, build)
+
+
 def mount_static() -> None:
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
 

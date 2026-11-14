@@ -9,7 +9,7 @@ switches:
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableTelemetry, private: 1}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableFirefoxStudies, private: 1}
-    expect: {processes: [firefox.exe], domains: [telemetry.mozilla.org, normandy.cdn.mozilla.net]}
+    expect: {domains: [telemetry.mozilla.org, normandy.cdn.mozilla.net, classify-client.services.mozilla.com]}
   - id: firefox.default-browser-agent
     title: Firefox default browser agent
     explain: A scheduled task that reports to Mozilla once a day which browser is your default, even when Firefox is closed.
@@ -28,7 +28,6 @@ switches:
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Google\Chrome', value: MetricsReportingEnabled, private: 0}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Google\Chrome', value: UrlKeyedAnonymizedDataCollectionEnabled, private: 0}
-    expect: {processes: [chrome.exe]}
   - id: nvidia.telemetry
     title: NVIDIA telemetry
     explain: NVIDIA's software reports hardware, game and usage data.
@@ -49,7 +48,7 @@ switches:
     detect: {path: ['%ProgramFiles%\Adobe\Acrobat DC\Acrobat\Acrobat.exe', '%ProgramFiles(x86)%\Adobe\Acrobat DC\Acrobat\Acrobat.exe']}
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown', value: bUsageMeasurement, private: 0}
-    expect: {processes: [acrobat.exe], domains: [adobe.io, omtrdc.net]}
+    expect: {domains: [cc-api-data.adobe.io, omtrdc.net, demdex.net, adobedtm.com]}
   - id: adobe.acrobat-cloud
     title: Adobe Acrobat cloud services and upsell
     explain: Acrobat contacts Adobe's cloud for storage, sign-in prompts and in-app offers.
