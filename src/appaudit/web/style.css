@@ -153,3 +153,66 @@ ul.facts li { margin-bottom: 4px; }
 button.small { padding: 4px 10px; font-size: 12.5px; }
 button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; }
 pre.plan { background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0; }
+
+/* --- column layout ------------------------------------------------------------------
+   Every table uses fixed column widths, so columns line up from row to row and long
+   names wrap inside their own column instead of pushing the others around. */
+body { max-width: 1360px; margin-left: auto; margin-right: auto; }
+table { table-layout: fixed; }
+th, td { overflow-wrap: anywhere; }
+td .chip { white-space: normal; }
+td.num, th.num { text-align: right; padding-right: 26px; }
+th { white-space: nowrap; }
+
+#live-table th:nth-child(1) { width: 27%; }
+#live-table th:nth-child(2) { width: 12%; }
+#live-table th:nth-child(3) { width: 10%; }
+#live-table th:nth-child(4) { width: 19%; }
+#live-table th:nth-child(5) { width: 21%; }
+#live-table th:nth-child(6) { width: 11%; }
+#live-table th:nth-child(2), #live-table th:nth-child(3),
+#company-table th:nth-child(2), #company-table th:nth-child(3),
+#history-table th:nth-child(2), #history-table th:nth-child(3), #history-table th:nth-child(4),
+table.inner th:nth-child(5), table.inner th:nth-child(6) { text-align: right; padding-right: 26px; }
+
+#company-table th:nth-child(1) { width: 22%; }
+#company-table th:nth-child(2) { width: 11%; }
+#company-table th:nth-child(3) { width: 11%; }
+#company-table th:nth-child(4) { width: 24%; }
+#company-table th:nth-child(5) { width: 32%; }
+
+#proc-table th:nth-child(1) { width: 10%; }
+#proc-table th:nth-child(2) { width: 27%; }
+#proc-table th:nth-child(3) { width: 29%; }
+#proc-table th:nth-child(4) { width: 11%; }
+#proc-table th:nth-child(5) { width: 12%; }
+#proc-table th:nth-child(6) { width: 11%; }
+#proc-table td:nth-child(6) { text-align: right; }
+
+#history-table th:nth-child(1) { width: 42%; }
+#history-table th:nth-child(2) { width: 11%; }
+#history-table th:nth-child(3) { width: 11%; }
+#history-table th:nth-child(4) { width: 12%; }
+#history-table th:nth-child(5) { width: 24%; }
+
+#apps th:nth-child(1) { width: 22%; }
+#apps th:nth-child(2) { width: 14%; }
+#apps th:nth-child(3) { width: 17%; }
+#apps th:nth-child(4) { width: 12%; }
+#apps th:nth-child(5) { width: 15%; }
+#apps th:nth-child(6) { width: 20%; }
+
+table.inner { width: 100%; min-width: 860px; }
+table.inner th:nth-child(1) { width: 27%; }
+table.inner th:nth-child(2) { width: 13%; }
+table.inner th:nth-child(3) { width: 14%; }
+table.inner th:nth-child(4) { width: 22%; }
+table.inner th:nth-child(5) { width: 8%; }
+table.inner th:nth-child(6) { width: 8%; }
+table.inner th:nth-child(7) { width: 8%; }
+
+/* Rows of cards: the text takes the room, the badge and button keep a fixed column. */
+.row > :last-child:not(.grow) { flex: 0 0 190px; text-align: right; }
+.row .grow { padding-right: 18px; }
+.tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

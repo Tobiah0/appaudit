@@ -53,7 +53,10 @@ async def guard(request: Request, call_next):
     reason = refusal(request.method, request.headers)
     if reason:
         return JSONResponse({"detail": reason}, status_code=403)
-    return await call_next(request)
+    response = await call_next(request)
+    # Always revalidate: the dashboard's own files change with every update of the tool.
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 @app.get("/api/session")

@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 // Proof, Windows telemetry, and "Who is listening".
 
@@ -222,7 +222,7 @@ async function loadHistory() {
       el("td", { class: "num", text: `${app.net_days} days` }),
       el("td", {}, app.focus ? `${(app.focus / 3600).toFixed(1)} h on ${app.focus_days} days`
         : el("span", { class: app.is_system ? "none" : "chip flag", text: "Never in focus" }))));
-    blocks.push(el("main", {}, el("table", {}, el("thead", {}, el("tr", {},
+    blocks.push(el("main", {}, el("table", { id: "history-table" }, el("thead", {}, el("tr", {},
       ["Program", "Sent", "Received", "Active on", "In front of you (about a week)"].map((t) => el("th", { text: t })))),
       el("tbody", {}, rows))));
   }
