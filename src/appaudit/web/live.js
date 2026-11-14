@@ -126,6 +126,8 @@ function actorDetail(actor) {
     el("td", { class: "num", text: bytes(d.sent) }), el("td", { class: "num", text: bytes(d.received) }),
     el("td", { text: since(d.last) })));
   const facts = [];
+  if (actor.about) facts.push(el("li", {}, el("strong", { text: "What it is: " }), actor.about,
+    actor.needed ? el("span", { class: "sub", text: ` Needed by Windows: ${actor.needed}.` }) : null));
   if (actor.services && actor.services.length) {
     for (const service of actor.services) {
       facts.push(el("li", {}, el("strong", { text: `${service.title} (${service.name})` }),
@@ -135,6 +137,25 @@ function actorDetail(actor) {
   if (actor.tasks.length) facts.push(el("li", { text: `Started by scheduled task: ${actor.tasks.join(", ")}` }));
   if (actor.on_behalf_of) facts.push(el("li", { text: `Running on behalf of ${actor.on_behalf_of}` }));
   facts.push(el("li", { text: `${plural(actor.runs, "process run")} in this window; first seen ${clock(actor.first)}` }));
+  const blockable = (actor.exes || []).filter((exe) => !/^[a-z]:\\windows\\/i.test(exe));
+  const blockRows = blockable.map((exe) => {
+    const existing = live.blocks.find((b) => b.exe.toLowerCase() === exe.toLowerCase());
+    const button = el("button", { type: "button", class: "small", text: existing ? "Remove block" : "Block its network access…" });
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (!existing && button.dataset.armed !== "1") {
+        button.dataset.armed = "1";
+        button.textContent = "Confirm: add a Windows Firewall rule";
+        return;
+      }
+      button.disabled = true;
+      const response = existing ? await post(`/api/blocks/${existing.id}/remove`) : await post("/api/blocks", { exe });
+      if (!response.ok) button.textContent = (await response.json()).detail;
+      await loadLive();
+    });
+    return el("div", { class: "row" }, el("div", { class: "grow mono", text: exe }),
+      existing ? el("span", { class: "state private", text: "Blocked" }) : null, button);
+  });
   return el("tr", { class: "detail" }, el("td", { colspan: "6" },
     el("ul", { class: "facts" }, facts),
     blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
@@ -221,7 +242,9 @@ function renderProcesses() {
   const rows = list.map((p) => el("tr", {},
     el("td", { title: clock(p.when), text: since(p.when) }),
     el("td", {}, el("div", { class: "name", text: p.process }), el("div", { class: "sub mono", text: p.exe || "" })),
-    el("td", {}, el("div", { text: p.actor }), p.role ? el("span", { class: "chip tag", text: p.role }) : null),
+    el("td", {}, el("div", { text: p.actor }), p.about ? el("div", { class: "sub", text: p.about }) : null,
+      p.reports ? el("span", { class: "chip flag", text: "Reports to its maker" }) : null,
+      p.role ? el("span", { class: "chip tag", text: p.role }) : null),
     el("td", { text: p.parent || "" }), el("td", { class: "mono", text: p.task || "" })));
   $("#proc-table tbody").replaceChildren(...rows);
   $("#proc-table").hidden = rows.length === 0;
@@ -245,5 +268,5 @@ setInterval(() => { if (!$("#page-activity").hidden || !$("#page-companies").hid
 window.addEventListener("load", () => {
   let saved = null;
   try { saved = localStorage.getItem("appaudit-page"); } catch (error) { /* private mode */ }
-  if (saved && document.getElementById(`page-${saved}`)) showPage(saved);
+  showPage(saved && document.getElementById(`page-${saved}`) ? saved : "summary");
 });

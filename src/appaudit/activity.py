@@ -210,6 +210,7 @@ def recent_processes(limit: int = 200, system_only: bool = False) -> list[dict]:
             continue
         result.append({"when": proc["started"], "ended": proc["ended"], "process": proc["name"], "actor": actor["name"],
                        "role": actor["role"] or actor["host"], "is_system": actor["is_system"], "task": proc["task"],
+                       "about": actor.get("about"), "reports": actor.get("reports"),
                        "parent": (proc["parent_exe"] or "").rsplit("\\", 1)[-1] or None, "exe": proc["exe"]})
         if len(result) >= limit:
             break

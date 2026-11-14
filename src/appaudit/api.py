@@ -225,6 +225,13 @@ def post_switch_undo(entry_id: int) -> dict:
     return result
 
 
+@app.get("/api/digest")
+def get_digest(hours: float = 12) -> dict:
+    from . import digest
+
+    return cached(("digest", hours), 20, lambda: digest.build(min(max(hours, 1), 24 * 30)))
+
+
 # --- per-app network blocks -------------------------------------------------------------------
 
 @app.get("/api/blocks")

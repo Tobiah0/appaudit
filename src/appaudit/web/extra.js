@@ -141,3 +141,53 @@ async function loadListeners() {
   page.replaceChildren(...blocks);
 }
 pageLoaders.listeners = loadListeners;
+
+// --- summary -------------------------------------------------------------------------------------
+
+function finding(title, lines, kind) {
+  return el("div", { class: "card" }, el("h2", { text: title }),
+    lines.length ? el("ul", { class: "facts" }, lines) : el("div", { class: kind === "good" ? "sub" : "none", text: "Nothing in this window." }));
+}
+
+async function loadSummary() {
+  const page = $("#page-summary");
+  if (!page.dataset.hours) page.dataset.hours = "12";
+  const hours = Number(page.dataset.hours);
+  const data = await (await fetch(`/api/digest?hours=${hours}`)).json();
+  const picker = el("div", { class: "tabs" }, [[1, "Last hour"], [12, "Last 12 hours"], [24, "Last 24 hours"], [168, "Last 7 days"]].map(([value, label]) => {
+    const button = el("button", { type: "button", class: value === hours ? "active" : "", text: label });
+    button.addEventListener("click", () => { page.dataset.hours = String(value); loadSummary(); });
+    return button;
+  }));
+  const totals = data.totals || {};
+  const blocks = [el("section", { class: "toolbar", style: "margin-top:16px" }, picker,
+    el("span", { class: "muted", text: data.watching.running ? "" : "The watcher is not running, so this shows only what was recorded earlier." }))];
+  blocks.push(el("section", { class: "tiles" }, [
+    ["", totals.actors || 0, "apps and components used the network"],
+    ["hot", bytes(totals.reporting_sent || 0), "sent to usage-reporting or ad services"],
+    ["hot", data.contradictions.length, "settings that are off but still active"],
+    ["", data.idle_but_active.length, "apps active that you rarely or never open"],
+  ].map(([kind, value, label]) => el("div", { class: `tile ${kind}` }, el("strong", { text: value }), el("span", { text: label })))));
+
+  blocks.push(finding("Switched off, but still active", data.contradictions.map((item) =>
+    el("li", {}, el("strong", { text: item.title }), `: ${footprintText(item.seen)}`))));
+  blocks.push(finding("Sent data to usage-reporting or advertising services", data.reporters.map((item) =>
+    el("li", {}, el("strong", { text: item.name }), ` sent ${bytes(item.sent)} to ${item.to.join(", ")}`))));
+  blocks.push(finding("Active, though you rarely or never open them", data.idle_but_active.map((item) =>
+    el("li", {}, el("strong", { text: item.name }),
+      ` ${item.never_recorded ? "has no record of you opening it" : `was last opened ${item.days_unused} days ago`}`
+      + `${item.starts_itself ? ", starts by itself" : ""}, and sent ${bytes(item.sent)}`
+      + (item.companies.length ? ` to ${item.companies.join(", ")}` : "")))));
+  blocks.push(finding("Windows reporting programs that ran", data.reporting_runs.map((item) =>
+    el("li", {}, el("strong", { text: item.process }), ` ran ${item.runs} time${item.runs === 1 ? "" : "s"}`
+      + (item.task ? ` (task ${item.task})` : ""), item.what ? el("div", { class: "sub", text: item.what }) : null))));
+  blocks.push(finding("Where the data went", data.companies.map((item) =>
+    el("li", {}, el("strong", { text: item.company }), ` received ${bytes(item.sent)} from ${item.actors.join(", ")}`))));
+  if (data.counters && data.counters.last_upload) {
+    blocks.push(el("div", { class: "card" }, el("h2", { text: "Windows' own record" }),
+      el("div", { text: `Last successful diagnostic-data upload: ${new Date(data.counters.last_upload * 1000).toLocaleString()} `
+        + `(${Number(data.counters.uploads || 0).toLocaleString()} uploads in total).` })));
+  }
+  page.replaceChildren(...blocks);
+}
+pageLoaders.summary = loadSummary;

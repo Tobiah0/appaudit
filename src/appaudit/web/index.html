@@ -19,7 +19,8 @@
   </header>
 
   <nav class="pages" aria-label="Sections">
-    <button type="button" data-page="activity" class="active">Activity</button>
+    <button type="button" data-page="summary" class="active">Summary</button>
+    <button type="button" data-page="activity">Activity</button>
     <button type="button" data-page="companies">Companies</button>
     <button type="button" data-page="processes">Background runs</button>
     <button type="button" data-page="apps">Apps</button>
@@ -29,8 +30,10 @@
     <button type="button" data-page="listeners">Who is listening</button>
   </nav>
 
+  <div class="page" id="page-summary"></div>
+
   <!-- Activity -->
-  <div class="page" id="page-activity">
+  <div class="page" id="page-activity" hidden>
     <section id="live-tiles" class="tiles" aria-label="Summary"></section>
     <section class="toolbar">
       <div class="tabs" id="live-window" role="tablist" aria-label="Time window">

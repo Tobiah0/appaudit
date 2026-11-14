@@ -1,0 +1,104 @@
+# Plain-language notes on programs people meet in a process list. Keyed by executable name.
+# needed: yes (Windows breaks without it) | usually (leave it unless you know why) | no (optional)
+# reports: true when its main job is sending usage or diagnostic data.
+svchost.exe: {what: A generic container that Windows uses to run its services. The service inside is what matters., needed: yes}
+system: {what: 'The Windows kernel itself. Network traffic shown here is done by drivers, file sharing or VPN components.', needed: yes}
+services.exe: {what: Starts and stops Windows services., needed: yes}
+lsass.exe: {what: Checks passwords and keeps you signed in., needed: yes}
+csrss.exe: {what: A core Windows process for windows and consoles., needed: yes}
+smss.exe: {what: Starts user sessions at boot., needed: yes}
+wininit.exe: {what: Starts core Windows processes at boot., needed: yes}
+winlogon.exe: {what: Handles sign-in and the lock screen., needed: yes}
+explorer.exe: {what: 'The desktop, taskbar and File Explorer.', needed: yes}
+dwm.exe: {what: Draws every window on screen., needed: yes}
+sihost.exe: {what: 'Runs parts of the Start menu, notifications and other shell features.', needed: yes}
+fontdrvhost.exe: {what: Renders fonts in an isolated process., needed: yes}
+ctfmon.exe: {what: Text input services such as language switching and the touch keyboard., needed: usually}
+conhost.exe: {what: The window behind every command-line program. It appears whenever another program runs a console tool., needed: yes}
+dllhost.exe: {what: A generic container for a Windows component. The component named beside it is what matters., needed: usually}
+rundll32.exe: {what: Runs a function from a DLL file. The DLL named beside it is what matters., needed: usually}
+taskhostw.exe: {what: A generic container that runs scheduled tasks implemented as DLLs. The task is what matters., needed: usually}
+runtimebroker.exe: {what: Checks permissions when a Store app asks for something such as files or the camera., needed: usually}
+backgroundtaskhost.exe: {what: Runs a background task for a Store app while the app is closed., needed: usually}
+applicationframehost.exe: {what: Hosts the window frame of Store apps., needed: usually}
+shellexperiencehost.exe: {what: 'Runs the notification centre, calendar flyout and quick settings.', needed: usually}
+startmenuexperiencehost.exe: {what: The Start menu., needed: yes}
+searchhost.exe: {what: The search box in Start and the taskbar. It contacts Bing when web results are on., needed: usually}
+searchindexer.exe: {what: Builds the index that makes file search fast., needed: usually}
+searchprotocolhost.exe: {what: Reads files for the search index., needed: usually}
+textinputhost.exe: {what: 'The touch keyboard, emoji panel and clipboard history.', needed: usually}
+widgets.exe: {what: The Widgets board. It loads a personalised MSN feed., needed: no}
+widgetservice.exe: {what: Feeds the Widgets board., needed: no}
+wmiprvse.exe: {what: Answers system-information queries from other programs. Monitoring tools trigger it a lot., needed: usually}
+wudfhost.exe: {what: Runs device drivers outside the kernel., needed: yes}
+spoolsv.exe: {what: The print queue., needed: usually}
+audiodg.exe: {what: Windows audio processing., needed: yes}
+securityhealthservice.exe: {what: Feeds the Windows Security app., needed: usually}
+msmpeng.exe: {what: Microsoft Defender's scanner. It sends file reputation checks and samples to Microsoft when cloud protection is on., needed: usually}
+mpdefendercoreservice.exe: {what: Part of Microsoft Defender. It reports security telemetry to Microsoft., needed: usually, reports: true}
+nissrv.exe: {what: Defender's network inspection., needed: usually}
+smartscreen.exe: {what: Checks downloads and sites against Microsoft's reputation service., needed: usually}
+mousocoreworker.exe: {what: The worker that checks for and installs Windows updates. It also downloads Microsoft's configuration settings., needed: usually}
+usoclient.exe: {what: Starts Windows Update scans and installs., needed: usually}
+wuauclt.exe: {what: Windows Update client., needed: usually}
+tiworker.exe: {what: Installs Windows updates and components., needed: usually}
+trustedinstaller.exe: {what: Installs Windows updates and components., needed: usually}
+sppsvc.exe: {what: Windows activation and licensing., needed: yes}
+compattelrunner.exe: {what: 'Microsoft Compatibility Telemetry. It scans installed programs, drivers and files and reports the results to Microsoft.', needed: no, reports: true}
+devicecensus.exe: {what: 'Device Census. It reports this PC''s hardware, settings and usage counts to Microsoft.', needed: no, reports: true}
+wsqmcons.exe: {what: The Customer Experience Improvement Program consolidator. It gathers usage data for upload., needed: no, reports: true}
+dmclient.exe: {what: The feedback client. It downloads the rules that decide when Windows asks for feedback., needed: no, reports: true}
+wermgr.exe: {what: Windows Error Reporting. It packages crash reports and sends them to Microsoft., needed: no, reports: true}
+werfault.exe: {what: Collects details when a program crashes., needed: no, reports: true}
+diagtrackrunner.exe: {what: A helper of the Windows telemetry service., needed: no, reports: true}
+sdbinst.exe: {what: Installs compatibility fixes for old programs., needed: usually}
+disksnapshot.exe: {what: Records how disk space is used for Microsoft's storage telemetry., needed: no, reports: true}
+cliprenew.exe: {what: Renews licences for Store apps., needed: usually}
+mscorsvw.exe: {what: Pre-compiles .NET programs so they start faster. It runs after updates., needed: usually}
+ngen.exe: {what: Pre-compiles .NET programs so they start faster., needed: usually}
+msedge.exe: {what: The Microsoft Edge browser. It can keep running in the background after you close it., needed: no}
+msedgewebview2.exe: {what: An embedded copy of Edge that other apps use to show web content. The app named beside it owns the traffic., needed: usually}
+microsoftedgeupdate.exe: {what: Checks for Edge and WebView2 updates., needed: usually}
+onedrive.exe: {what: OneDrive file sync., needed: no}
+onedrivestandaloneupdater.exe: {what: Updates OneDrive and sends a usage report., needed: no}
+phoneexperiencehost.exe: {what: Phone Link. It connects to your phone through Microsoft's servers., needed: no}
+gamebar.exe: {what: The Xbox Game Bar overlay., needed: no}
+gamingservices.exe: {what: Xbox and Game Pass support services., needed: no}
+officeclicktorun.exe: {what: Keeps Microsoft 365 apps updated and reports their health., needed: usually}
+git.exe: {what: The Git version-control tool. Developer tools and editors run it constantly in the background., needed: no}
+powershell.exe: {what: Windows PowerShell. Another program started it to run a script., needed: usually}
+pwsh.exe: {what: PowerShell 7. Another program started it to run a script., needed: no}
+cmd.exe: {what: The command prompt. Another program started it to run a command., needed: usually}
+pktmon.exe: {what: Windows' built-in packet monitor. This tool uses it to read DNS answers., needed: no}
+logman.exe: {what: Windows' tool for listing and managing trace sessions. This tool uses it to see who is tracing., needed: no}
+googleupdater.exe: {what: Checks for Chrome and other Google software updates and reports installed versions., needed: usually}
+updater.exe: {what: 'An updater. Several vendors ship one with this name; the folder shows whose it is.', needed: usually}
+default-browser-agent.exe: {what: Firefox's daily report to Mozilla about which browser is your default. It runs even when Firefox is closed., needed: no, reports: true}
+firefox.exe: {what: The Firefox browser., needed: no}
+chrome.exe: {what: The Chrome browser., needed: no}
+steam.exe: {what: The Steam client., needed: no}
+steamwebhelper.exe: {what: The browser inside Steam that shows the store and community pages., needed: no}
+nvcontainer.exe: {what: Runs NVIDIA's background features. One of its jobs is telemetry., needed: usually}
+nvdisplay.container.exe: {what: NVIDIA display driver support., needed: usually}
+nvidia app.exe: {what: The NVIDIA app for drivers and game settings., needed: no}
+ccxprocess.exe: {what: Adobe Creative Cloud Experience. It starts with Windows and loads Adobe's in-app content., needed: no}
+adobearm.exe: {what: Adobe Acrobat's updater., needed: usually}
+acrotray.exe: {what: An Acrobat helper that starts with Windows and stays in the background., needed: no}
+adobecollabsync.exe: {what: Syncs Acrobat comments and shared reviews with Adobe's cloud., needed: no}
+agsservice.exe: {what: Adobe Genuine Service. It checks that Adobe software is licensed and reports to Adobe., needed: no, reports: true}
+spotify.exe: {what: The Spotify player., needed: no}
+discord.exe: {what: The Discord chat client., needed: no}
+slack.exe: {what: The Slack client., needed: no}
+notion.exe: {what: The Notion app., needed: no}
+zoom.exe: {what: The Zoom meeting client., needed: no}
+dropbox.exe: {what: Dropbox file sync., needed: no}
+parsecd.exe: {what: Parsec remote desktop. It keeps a connection to Parsec's servers so you can be reached., needed: no}
+claude.exe: {what: The Claude desktop app., needed: no}
+python.exe: {what: The Python interpreter. Whatever script it is running owns the traffic., needed: no}
+node.exe: {what: The Node.js runtime. Whatever script it is running owns the traffic., needed: no}
+postgres.exe: {what: The PostgreSQL database server., needed: no}
+docker desktop.exe: {what: Docker Desktop., needed: no}
+mathworksservicehost.exe: {what: MATLAB's background service for licensing and updates., needed: no}
+icue.exe: {what: Corsair's device software., needed: no}
+lghub.exe: {what: Logitech's device software., needed: no}
+logioptionsplus_agent.exe: {what: Logitech Options+ background agent., needed: no}

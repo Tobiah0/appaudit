@@ -9,6 +9,7 @@ import re
 import winreg
 from functools import lru_cache
 
+from .explain import components
 from .identity import AppRef, Resolver
 
 HOSTS = {
@@ -105,6 +106,8 @@ class Attributor:
         actor = {"id": app.id, "name": app.name, "publisher": app.publisher, "kind": app.kind,
                  "is_system": app.is_system, "process": name, "role": None, "on_behalf_of": None,
                  "services": [], "task": proc.get("task"), "host": HOSTS.get(lowered)}
+        note = components.note(name) or {}
+        actor.update(about=note.get("what"), needed=note.get("needed"), reports=bool(note.get("reports")))
         cmdline = proc.get("cmdline") or ""
 
         if lowered == "svchost.exe" and proc.get("services"):
