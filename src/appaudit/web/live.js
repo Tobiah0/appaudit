@@ -237,8 +237,8 @@ $("#live-reporting").addEventListener("change", (event) => { live.reportingOnly 
 
 function renderProcesses() {
   const needle = live.procSearch.trim().toLowerCase();
-  const list = live.processes.filter((p) => !needle
-    || `${p.process} ${p.actor} ${p.task || ""} ${p.parent || ""}`.toLowerCase().includes(needle));
+  const list = live.processes.filter((p) => (live.procPlumbing || !p.plumbing) && (!needle
+    || `${p.process} ${p.actor} ${p.task || ""} ${p.parent || ""}`.toLowerCase().includes(needle)));
   const rows = list.map((p) => el("tr", {},
     el("td", { title: clock(p.when) }, el("div", { text: since(p.when) }),
       p.runs > 1 ? el("div", { class: "sub", text: `first ${since(p.first)}` }) : null),
@@ -258,6 +258,7 @@ async function loadProcesses() {
 }
 pageLoaders.processes = loadProcesses;
 $("#proc-system").addEventListener("change", (event) => { live.procSystem = event.target.checked; loadProcesses(); });
+$("#proc-plumbing").addEventListener("change", (event) => { live.procPlumbing = event.target.checked; renderProcesses(); });
 $("#proc-search").addEventListener("input", (event) => { live.procSearch = event.target.value; renderProcesses(); });
 
 // --- start ---------------------------------------------------------------------------------

@@ -192,6 +192,10 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
     }
 
 
+# Programs that only exist to support another program's console window. They say nothing by themselves.
+PLUMBING = {"conhost.exe", "chcp.com", "openconsole.exe"}
+
+
 def recent_processes(limit: int = 200, system_only: bool = False, hours: float = 24) -> list[dict]:
     """Processes that started while the helper was watching, newest first."""
     conn = _connect()
@@ -217,7 +221,8 @@ def recent_processes(limit: int = 200, system_only: bool = False, hours: float =
             groups[key] = {"when": proc["started"], "first": proc["started"], "runs": 1, "process": proc["name"],
                            "actor": actor["name"], "role": actor["role"] or actor["host"],
                            "is_system": actor["is_system"], "task": proc["task"], "about": actor.get("about"),
-                           "reports": actor.get("reports"), "parent": parent, "exe": proc["exe"]}
+                           "reports": actor.get("reports"), "parent": parent, "exe": proc["exe"],
+                           "plumbing": (proc["name"] or "").lower() in PLUMBING}
         else:
             group["runs"] += 1
             group["first"] = min(group["first"], proc["started"])
