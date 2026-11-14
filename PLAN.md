@@ -104,4 +104,5 @@ Phases 2 to 7 and 10 are never cut.
 Updated at the end of each phase.
 
 - 2026-11-13: day-1 app audit built (inventory, grouping, dashboard). Research done.
-- Phase 1: in progress.
+- Phases 1-2 done: tracing module, decoders, live database, elevated helper with a user-only command pipe, 9 tests. The helper is started with `uv run python -m appaudit.helper --launch` and stopped with the `stop` pipe command.
+- Phase 3: in progress.
