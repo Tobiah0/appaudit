@@ -3,6 +3,17 @@
 const state = { apps: [], summary: null, scan: null, view: "mismatch", search: "", showSystem: false, open: null };
 const $ = (selector) => document.querySelector(selector);
 
+// State-changing calls carry a session token that only this page can read.
+let sessionToken = null;
+async function post(url, body) {
+  if (!sessionToken) sessionToken = (await (await fetch("/api/session")).json()).token;
+  return fetch(url, {
+    method: "POST",
+    headers: { "X-AppAudit-Token": sessionToken, "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
 // Build DOM nodes with textContent only, so names read from the registry are never parsed as HTML.
 function el(tag, props = {}, ...children) {
   const node = document.createElement(tag);
@@ -211,7 +222,7 @@ function renderStatus(status) {
   if (status.error) {
     notice.hidden = false;
     notice.textContent = `The last scan failed: ${status.error}`;
-  } else if (!status.elevated) {
+  } else if (!status.helper || !status.helper.running) {
     notice.hidden = false;
     notice.textContent = "Running without administrator rights. Run history, 30-day usage and network totals, "
       + "and domain names are not collected, so \"no record\" can mean the app was started in a way Windows did not log.";
@@ -254,8 +265,8 @@ async function poll() {
   setTimeout(poll, wasScanning ? 800 : 4000);
 }
 
-document.querySelectorAll(".tabs button").forEach((button) => button.addEventListener("click", () => {
-  document.querySelectorAll(".tabs button").forEach((other) => other.classList.toggle("active", other === button));
+document.querySelectorAll("#app-tabs button").forEach((button) => button.addEventListener("click", () => {
+  document.querySelectorAll("#app-tabs button").forEach((other) => other.classList.toggle("active", other === button));
   state.view = button.dataset.view;
   state.open = null;
   renderTable();
@@ -263,7 +274,7 @@ document.querySelectorAll(".tabs button").forEach((button) => button.addEventLis
 $("#search").addEventListener("input", (event) => { state.search = event.target.value; renderTable(); });
 $("#show-system").addEventListener("change", (event) => { state.showSystem = event.target.checked; renderTable(); });
 $("#rescan").addEventListener("click", async () => {
-  await fetch("/api/scan", { method: "POST" });
+  await post("/api/scan");
   wasScanning = true;
   $("#rescan").disabled = true;
   $("#rescan").textContent = "Scanning…";

@@ -10,47 +10,104 @@
   <header class="top">
     <div>
       <h1>App Audit</h1>
-      <p class="tagline">What your apps do when you are not using them</p>
+      <p class="tagline">See what your PC does, switch it off, and check that it stopped</p>
     </div>
     <div class="scan-box">
-      <span id="scan-time" class="muted"></span>
-      <button id="rescan" type="button">Scan again</button>
+      <span id="watch-state" class="muted"></span>
+      <button id="watch-toggle" type="button" hidden>Start watching</button>
     </div>
   </header>
 
-  <div id="notice" class="notice" hidden></div>
+  <nav class="pages" aria-label="Sections">
+    <button type="button" data-page="activity" class="active">Activity</button>
+    <button type="button" data-page="companies">Companies</button>
+    <button type="button" data-page="processes">Background runs</button>
+    <button type="button" data-page="apps">Apps</button>
+    <button type="button" data-page="switches">Switches</button>
+    <button type="button" data-page="proof">Proof</button>
+    <button type="button" data-page="windows">Windows telemetry</button>
+    <button type="button" data-page="listeners">Who is listening</button>
+  </nav>
 
-  <section id="tiles" class="tiles" aria-label="Summary"></section>
+  <!-- Activity -->
+  <div class="page" id="page-activity">
+    <section id="live-tiles" class="tiles" aria-label="Summary"></section>
+    <section class="toolbar">
+      <div class="tabs" id="live-window" role="tablist" aria-label="Time window">
+        <button type="button" data-hours="1">Last hour</button>
+        <button type="button" data-hours="24" class="active">Last 24 hours</button>
+        <button type="button" data-hours="168">Last 7 days</button>
+      </div>
+      <input id="live-search" type="search" placeholder="Search apps, companies, domains" aria-label="Search activity">
+      <label class="check"><input id="live-hide-system" type="checkbox"> Hide Windows components</label>
+      <label class="check"><input id="live-reporting" type="checkbox"> Only apps that report or advertise</label>
+    </section>
+    <main>
+      <table id="live-table">
+        <thead><tr><th>Who</th><th>Sent</th><th>Received</th><th>Goes to</th><th>What for</th><th>Last active</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="live-empty" class="empty" hidden></p>
+    </main>
+  </div>
 
-  <section class="toolbar">
-    <div class="tabs" role="tablist" aria-label="View">
-      <button type="button" role="tab" data-view="mismatch" class="active">Mismatches</button>
-      <button type="button" role="tab" data-view="all">All apps</button>
-      <button type="button" role="tab" data-view="used">Most used</button>
-    </div>
-    <input id="search" type="search" placeholder="Search apps" aria-label="Search apps">
-    <label class="check"><input id="show-system" type="checkbox"> Show Windows components</label>
-  </section>
+  <!-- Companies -->
+  <div class="page" id="page-companies" hidden>
+    <p class="lead">Every company that received data from this PC in the chosen window, and which of your apps sent it.</p>
+    <main><table id="company-table">
+      <thead><tr><th>Company</th><th>Sent to them</th><th>Received</th><th>What for</th><th>Sent by</th></tr></thead>
+      <tbody></tbody></table>
+      <p id="company-empty" class="empty" hidden>Nothing recorded yet.</p>
+    </main>
+  </div>
 
-  <main>
-    <table id="apps">
-      <thead>
-        <tr>
-          <th>App</th>
-          <th>Last opened by you</th>
-          <th>Starts by itself</th>
-          <th>Running now</th>
-          <th>Camera, mic, location</th>
-          <th>Why it is listed</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <p id="empty" class="empty" hidden></p>
-  </main>
+  <!-- Background runs -->
+  <div class="page" id="page-processes" hidden>
+    <p class="lead">Programs that started by themselves while the watcher was running, newest first.</p>
+    <section class="toolbar">
+      <label class="check"><input id="proc-system" type="checkbox" checked> Windows components only</label>
+      <input id="proc-search" type="search" placeholder="Search" aria-label="Search background runs">
+    </section>
+    <main><table id="proc-table">
+      <thead><tr><th>When</th><th>Program</th><th>What it is</th><th>Started by</th><th>Scheduled task</th></tr></thead>
+      <tbody></tbody></table>
+      <p id="proc-empty" class="empty" hidden>Nothing recorded yet.</p>
+    </main>
+  </div>
 
-  <footer id="sources" class="sources"></footer>
+  <!-- Apps (inventory) -->
+  <div class="page" id="page-apps" hidden>
+    <div class="scan-row"><span id="scan-time" class="muted"></span> <button id="rescan" type="button">Scan again</button></div>
+    <div id="notice" class="notice" hidden></div>
+    <section id="tiles" class="tiles" aria-label="Summary"></section>
+    <section class="toolbar">
+      <div class="tabs" id="app-tabs" role="tablist" aria-label="View">
+        <button type="button" role="tab" data-view="mismatch" class="active">Mismatches</button>
+        <button type="button" role="tab" data-view="all">All apps</button>
+        <button type="button" role="tab" data-view="used">Most used</button>
+      </div>
+      <input id="search" type="search" placeholder="Search apps" aria-label="Search apps">
+      <label class="check"><input id="show-system" type="checkbox"> Show Windows components</label>
+    </section>
+    <main>
+      <table id="apps">
+        <thead><tr><th>App</th><th>Last opened by you</th><th>Starts by itself</th><th>Running now</th>
+          <th>Camera, mic, location</th><th>Why it is listed</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p id="empty" class="empty" hidden></p>
+    </main>
+    <footer id="sources" class="sources"></footer>
+  </div>
+
+  <div class="page" id="page-switches" hidden></div>
+  <div class="page" id="page-proof" hidden></div>
+  <div class="page" id="page-windows" hidden></div>
+  <div class="page" id="page-listeners" hidden></div>
 
   <script src="app.js"></script>
+  <script src="live.js"></script>
+  <script src="switches.js"></script>
+  <script src="extra.js"></script>
 </body>
 </html>
