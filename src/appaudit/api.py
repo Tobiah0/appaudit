@@ -36,16 +36,23 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="App Audit", lifespan=lifespan)
 
 
+def refusal(method: str, headers) -> str | None:
+    """Why a request must be refused, or None when it may proceed."""
+    host = (headers.get("host") or "").rsplit(":", 1)[0].lower()
+    if host not in ALLOWED_HOSTS:
+        return "unexpected Host header"
+    if headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
+        return "cross-site requests are refused"
+    if method not in ("GET", "HEAD") and headers.get("x-appaudit-token") != TOKEN:
+        return "missing or wrong session token"
+    return None
+
+
 @app.middleware("http")
 async def guard(request: Request, call_next):
-    host = (request.headers.get("host") or "").rsplit(":", 1)[0].lower()
-    if host not in ALLOWED_HOSTS:
-        return JSONResponse({"detail": "unexpected Host header"}, status_code=403)
-    site = request.headers.get("sec-fetch-site")
-    if site not in (None, "same-origin", "none"):
-        return JSONResponse({"detail": "cross-site requests are refused"}, status_code=403)
-    if request.method not in ("GET", "HEAD") and request.headers.get("x-appaudit-token") != TOKEN:
-        return JSONResponse({"detail": "missing or wrong session token"}, status_code=403)
+    reason = refusal(request.method, request.headers)
+    if reason:
+        return JSONResponse({"detail": reason}, status_code=403)
     return await call_next(request)
 
 
