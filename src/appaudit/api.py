@@ -268,6 +268,30 @@ def post_history_refresh() -> dict:
     return result
 
 
+# --- dismissed items (a display choice; nothing on the PC changes) ------------------------------
+
+@app.get("/api/dismissed")
+def get_dismissed() -> dict:
+    from . import dismissed
+
+    return {"dismissed": dismissed.listing()}
+
+
+@app.post("/api/dismissed")
+async def post_dismissed(request: Request) -> dict:
+    from . import dismissed
+
+    body = await request.json()
+    try:
+        if body.get("remove"):
+            dismissed.remove(str(body.get("kind")), str(body.get("key", "")))
+        else:
+            dismissed.add(str(body.get("kind")), str(body.get("key", "")), str(body.get("label", "")))
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    return {"dismissed": dismissed.listing()}
+
+
 # --- per-app network blocks -------------------------------------------------------------------
 
 @app.get("/api/blocks")

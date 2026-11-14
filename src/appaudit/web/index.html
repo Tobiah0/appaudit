@@ -45,6 +45,7 @@
       <input id="live-search" type="search" placeholder="Search apps, companies, domains" aria-label="Search activity">
       <label class="check"><input id="live-hide-system" type="checkbox"> Hide Windows components</label>
       <label class="check"><input id="live-reporting" type="checkbox"> Only apps that report or advertise</label>
+      <label class="check"><input id="live-dismissed" type="checkbox"> <span id="live-dismissed-label">Show dismissed</span></label>
     </section>
     <main>
       <table id="live-table">
@@ -71,10 +72,11 @@
     <section class="toolbar">
       <label class="check"><input id="proc-system" type="checkbox" checked> Windows components only</label>
       <label class="check"><input id="proc-plumbing" type="checkbox"> Show console helpers (conhost and similar)</label>
+      <label class="check"><input id="proc-dismissed" type="checkbox"> <span id="proc-dismissed-label">Show dismissed</span></label>
       <input id="proc-search" type="search" placeholder="Search" aria-label="Search background runs">
     </section>
     <main><table id="proc-table">
-      <thead><tr><th>Last run</th><th>Program</th><th>What it is</th><th>Started by</th><th>Scheduled task</th></tr></thead>
+      <thead><tr><th>Last run</th><th>Program</th><th>What it is</th><th>Started by</th><th>Scheduled task</th><th></th></tr></thead>
       <tbody></tbody></table>
       <p id="proc-empty" class="empty" hidden>Nothing recorded yet.</p>
     </main>

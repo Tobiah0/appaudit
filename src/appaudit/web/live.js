@@ -2,7 +2,7 @@
 
 // Navigation, the watcher status, and the three live pages: Activity, Companies, Background runs.
 
-const live = { blocks: [], data: null, hours: 24, search: "", hideSystem: false, reportingOnly: false, open: null,
+const live = { dismissed: [], showDismissed: false, procShowDismissed: false, blocks: [], data: null, hours: 24, search: "", hideSystem: false, reportingOnly: false, open: null,
                processes: [], procSystem: true, procSearch: "" };
 
 const CATEGORY_TITLES = {
@@ -78,7 +78,23 @@ $("#watch-toggle").addEventListener("click", async () => {
 
 // --- activity ----------------------------------------------------------------------------
 
+// "Dismissed" is the user saying "I have looked at this and it is fine". It only hides the row.
+const isDismissed = (kind, key) => live.dismissed.some((d) => d.kind === kind && d.key === String(key).toLowerCase());
+async function setDismissed(kind, key, label, remove) {
+  const response = await post("/api/dismissed", { kind, key, label, remove: Boolean(remove) });
+  if (response.ok) live.dismissed = (await response.json()).dismissed;
+  renderLive();
+  renderProcesses();
+}
+function dismissButton(kind, key, label) {
+  const hidden = isDismissed(kind, key);
+  const button = el("button", { type: "button", class: "small", text: hidden ? "Show again" : "This is fine, hide it" });
+  button.addEventListener("click", (event) => { event.stopPropagation(); setDismissed(kind, key, label, hidden); });
+  return button;
+}
+
 function actorMatches(actor) {
+  if (!live.showDismissed && isDismissed("actor", actor.id)) return false;
   if (live.hideSystem && actor.is_system) return false;
   if (live.reportingOnly && !actor.reporting_sent) return false;
   const needle = live.search.trim().toLowerCase();
@@ -157,6 +173,7 @@ function actorDetail(actor) {
       existing ? el("span", { class: "state private", text: "Blocked" }) : null, button);
   });
   return el("tr", { class: "detail" }, el("td", { colspan: "6" },
+    el("div", { style: "float:right" }, dismissButton("actor", actor.id, actor.name)),
     el("ul", { class: "facts" }, facts),
     blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
       el("div", { class: "sub", text: "Adds an outgoing block rule for the program in Windows Firewall. You can remove it here or in Windows." }), blockRows) : null,
@@ -180,6 +197,7 @@ function renderLive() {
   $("#live-tiles").replaceChildren(...tiles.map(([kind, value, label]) =>
     el("div", { class: `tile ${kind}` }, el("strong", { text: value }), el("span", { text: label }))));
 
+  $("#live-dismissed-label").textContent = `Show dismissed (${data.actors.filter((a) => isDismissed("actor", a.id)).length})`;
   const actors = data.actors.filter(actorMatches);
   const rows = [];
   for (const actor of actors) {
@@ -219,6 +237,7 @@ async function loadLive() {
   try {
     live.data = await (await fetch(`/api/live?hours=${live.hours}`)).json();
     live.blocks = (await (await fetch("/api/blocks")).json()).blocks;
+    live.dismissed = (await (await fetch("/api/dismissed")).json()).dismissed;
     renderLive();
   } catch (error) { /* keep the previous view */ }
 }
@@ -237,7 +256,10 @@ $("#live-reporting").addEventListener("change", (event) => { live.reportingOnly 
 
 function renderProcesses() {
   const needle = live.procSearch.trim().toLowerCase();
-  const list = live.processes.filter((p) => (live.procPlumbing || !p.plumbing) && (!needle
+  const hiddenPrograms = live.processes.filter((p) => isDismissed("program", p.exe || p.process)).length;
+  $("#proc-dismissed-label").textContent = `Show dismissed (${hiddenPrograms})`;
+  const list = live.processes.filter((p) => (live.procPlumbing || !p.plumbing)
+    && (live.procShowDismissed || !isDismissed("program", p.exe || p.process)) && (!needle
     || `${p.process} ${p.actor} ${p.task || ""} ${p.parent || ""}`.toLowerCase().includes(needle)));
   const rows = list.map((p) => el("tr", {},
     el("td", { title: clock(p.when) }, el("div", { text: since(p.when) }),
@@ -246,7 +268,8 @@ function renderProcesses() {
     el("td", {}, el("div", { text: p.actor }), p.about ? el("div", { class: "sub", text: p.about }) : null,
       p.reports ? el("span", { class: "chip flag", text: "Reports to its maker" }) : null,
       p.role ? el("span", { class: "chip tag", text: p.role }) : null),
-    el("td", { text: p.parent || "" }), el("td", { class: "mono", text: p.task || "" })));
+    el("td", { text: p.parent || "" }), el("td", { class: "mono", text: p.task || "" }),
+    el("td", {}, dismissButton("program", p.exe || p.process, p.process))));
   $("#proc-table tbody").replaceChildren(...rows);
   $("#proc-table").hidden = rows.length === 0;
   $("#proc-empty").hidden = rows.length > 0;
@@ -254,10 +277,13 @@ function renderProcesses() {
 async function loadProcesses() {
   const data = await (await fetch(`/api/live/processes?system_only=${live.procSystem}`)).json();
   live.processes = data.processes;
+  live.dismissed = (await (await fetch("/api/dismissed")).json()).dismissed;
   renderProcesses();
 }
 pageLoaders.processes = loadProcesses;
 $("#proc-system").addEventListener("change", (event) => { live.procSystem = event.target.checked; loadProcesses(); });
+$("#proc-dismissed").addEventListener("change", (event) => { live.procShowDismissed = event.target.checked; renderProcesses(); });
+$("#live-dismissed").addEventListener("change", (event) => { live.showDismissed = event.target.checked; renderLive(); });
 $("#proc-plumbing").addEventListener("change", (event) => { live.procPlumbing = event.target.checked; renderProcesses(); });
 $("#proc-search").addEventListener("input", (event) => { live.procSearch = event.target.value; renderProcesses(); });
 
