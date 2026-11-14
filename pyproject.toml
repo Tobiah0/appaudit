@@ -1,0 +1,22 @@
+[project]
+name = "appaudit"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Tobiah0", email = "tobiahsol@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "dissect-esedb>=3.18",
+    "fastapi>=0.162.7",
+    "psutil>=7.2.2",
+    "pywin32>=312",
+    "uvicorn>=0.54.0",
+]
+
+[project.scripts]
+appaudit = "appaudit:main"
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"

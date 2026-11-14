@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App Audit</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>App Audit</h1>
+      <p class="tagline">What your apps do when you are not using them</p>
+    </div>
+    <div class="scan-box">
+      <span id="scan-time" class="muted"></span>
+      <button id="rescan" type="button">Scan again</button>
+    </div>
+  </header>
+
+  <div id="notice" class="notice" hidden></div>
+
+  <section id="tiles" class="tiles" aria-label="Summary"></section>
+
+  <section class="toolbar">
+    <div class="tabs" role="tablist" aria-label="View">
+      <button type="button" role="tab" data-view="mismatch" class="active">Mismatches</button>
+      <button type="button" role="tab" data-view="all">All apps</button>
+      <button type="button" role="tab" data-view="used">Most used</button>
+    </div>
+    <input id="search" type="search" placeholder="Search apps" aria-label="Search apps">
+    <label class="check"><input id="show-system" type="checkbox"> Show Windows components</label>
+  </section>
+
+  <main>
+    <table id="apps">
+      <thead>
+        <tr>
+          <th>App</th>
+          <th>Last opened by you</th>
+          <th>Starts by itself</th>
+          <th>Running now</th>
+          <th>Camera, mic, location</th>
+          <th>Why it is listed</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="empty" class="empty" hidden></p>
+  </main>
+
+  <footer id="sources" class="sources"></footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
