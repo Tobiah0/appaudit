@@ -192,26 +192,33 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
     }
 
 
-def recent_processes(limit: int = 200, system_only: bool = False) -> list[dict]:
+def recent_processes(limit: int = 200, system_only: bool = False, hours: float = 24) -> list[dict]:
     """Processes that started while the helper was watching, newest first."""
     conn = _connect()
     if conn is None:
         return []
     who = attributor()
     try:
-        rows = conn.execute("SELECT * FROM procs WHERE seen_start = 1 ORDER BY started DESC LIMIT ?", (limit * 3,)).fetchall()
+        rows = conn.execute("SELECT * FROM procs WHERE seen_start = 1 AND started >= ? ORDER BY started DESC LIMIT 20000",
+                            (time.time() - hours * 3600,)).fetchall()
     finally:
         conn.close()
-    result = []
+    # One row per (program, what it is, who started it, task): repeated runs are counted, not listed.
+    groups: dict[tuple, dict] = {}
     for row in rows:
         proc = dict(row)
         actor = who.actor(proc)
         if system_only and not actor["is_system"]:
             continue
-        result.append({"when": proc["started"], "ended": proc["ended"], "process": proc["name"], "actor": actor["name"],
-                       "role": actor["role"] or actor["host"], "is_system": actor["is_system"], "task": proc["task"],
-                       "about": actor.get("about"), "reports": actor.get("reports"),
-                       "parent": (proc["parent_exe"] or "").rsplit("\\", 1)[-1] or None, "exe": proc["exe"]})
-        if len(result) >= limit:
-            break
-    return result
+        parent = (proc["parent_exe"] or "").rsplit("\\", 1)[-1] or None
+        key = ((proc["exe"] or proc["name"] or "").lower(), actor["id"], parent, proc["task"])
+        group = groups.get(key)
+        if group is None:
+            groups[key] = {"when": proc["started"], "first": proc["started"], "runs": 1, "process": proc["name"],
+                           "actor": actor["name"], "role": actor["role"] or actor["host"],
+                           "is_system": actor["is_system"], "task": proc["task"], "about": actor.get("about"),
+                           "reports": actor.get("reports"), "parent": parent, "exe": proc["exe"]}
+        else:
+            group["runs"] += 1
+            group["first"] = min(group["first"], proc["started"])
+    return sorted(groups.values(), key=lambda item: -item["when"])[:limit]

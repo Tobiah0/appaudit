@@ -240,8 +240,9 @@ function renderProcesses() {
   const list = live.processes.filter((p) => !needle
     || `${p.process} ${p.actor} ${p.task || ""} ${p.parent || ""}`.toLowerCase().includes(needle));
   const rows = list.map((p) => el("tr", {},
-    el("td", { title: clock(p.when), text: since(p.when) }),
-    el("td", {}, el("div", { class: "name", text: p.process }), el("div", { class: "sub mono", text: p.exe || "" })),
+    el("td", { title: clock(p.when) }, el("div", { text: since(p.when) }),
+      p.runs > 1 ? el("div", { class: "sub", text: `first ${since(p.first)}` }) : null),
+    el("td", {}, el("div", { class: "name" }, p.process, p.runs > 1 ? el("span", { class: "chip", style: "margin-left:6px", text: `ran ${p.runs.toLocaleString()} times` }) : null), el("div", { class: "sub mono", text: p.exe || "" })),
     el("td", {}, el("div", { text: p.actor }), p.about ? el("div", { class: "sub", text: p.about }) : null,
       p.reports ? el("span", { class: "chip flag", text: "Reports to its maker" }) : null,
       p.role ? el("span", { class: "chip tag", text: p.role }) : null),

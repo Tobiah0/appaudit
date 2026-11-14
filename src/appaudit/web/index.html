@@ -67,13 +67,13 @@
 
   <!-- Background runs -->
   <div class="page" id="page-processes" hidden>
-    <p class="lead">Programs that started by themselves while the watcher was running, newest first.</p>
+    <p class="lead">Programs that started in the last 24 hours while the watcher was running. Repeated runs of the same program by the same starter are shown once, with a count.</p>
     <section class="toolbar">
       <label class="check"><input id="proc-system" type="checkbox" checked> Windows components only</label>
       <input id="proc-search" type="search" placeholder="Search" aria-label="Search background runs">
     </section>
     <main><table id="proc-table">
-      <thead><tr><th>When</th><th>Program</th><th>What it is</th><th>Started by</th><th>Scheduled task</th></tr></thead>
+      <thead><tr><th>Last run</th><th>Program</th><th>What it is</th><th>Started by</th><th>Scheduled task</th></tr></thead>
       <tbody></tbody></table>
       <p id="proc-empty" class="empty" hidden>Nothing recorded yet.</p>
     </main>
