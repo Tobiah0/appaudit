@@ -1,0 +1,54 @@
+group: Windows AI features
+defaults:
+  source: https://learn.microsoft.com/en-us/windows/client-management/mdm/policy-csp-windowsai
+switches:
+  - id: ai.recall
+    title: Recall snapshots
+    explain: Recall saves pictures of your screen every few seconds and makes them searchable.
+    breaks: Recall and its timeline are unavailable.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\WindowsAI', value: DisableAIDataAnalysis, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\WindowsAI', value: AllowRecallEnablement, private: 0}
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\WindowsAI', value: DisableAIDataAnalysis, private: 1}
+  - id: ai.click-to-do
+    title: Click to Do
+    explain: Analyses what is on screen to offer AI actions on text and images.
+    breaks: Click to Do is unavailable.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\WindowsAI', value: DisableClickToDo, private: 1}
+  - id: ai.copilot
+    title: Windows Copilot
+    explain: The Copilot assistant sends what you ask, and context from Windows, to Microsoft.
+    breaks: The Copilot button and shortcut do nothing.
+    note: Newer builds ship Copilot as a Store app; uninstalling the app is the complete removal.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\WindowsCopilot', value: TurnOffWindowsCopilot, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot', value: TurnOffWindowsCopilot, private: 1}
+    expect: {domains: [copilot.microsoft.com, sydney.bing.com]}
+  - id: ai.generative-app-access
+    title: Apps can use Windows' on-device AI models
+    explain: Lets apps run text and image generation through models that Windows provides.
+    breaks: Apps that rely on Windows' built-in models lose those features.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels', value: Value, kind: string, private: Deny, default: Allow}
+  - id: ai.paint
+    title: AI features in Paint
+    explain: Cocreator, Image Creator and generative fill send your prompts and images to Microsoft.
+    breaks: Those three Paint features are unavailable.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint', value: DisableCocreator, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint', value: DisableImageCreator, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint', value: DisableGenerativeFill, private: 1}
+  - id: ai.notepad
+    title: AI features in Notepad
+    explain: Rewrite and summarise send your text to Microsoft.
+    breaks: Those Notepad features are unavailable.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\WindowsNotepad', value: DisableAIFeatures, private: 1}
+  - id: ai.fabric-service
+    title: Windows AI components host
+    explain: The service that runs Windows' on-device AI components such as Recall's analysis.
+    breaks: On-device AI features in Windows stop working.
+    risk: medium
+    checks:
+      - {type: service, name: WSAIFabricSvc, private: disabled}

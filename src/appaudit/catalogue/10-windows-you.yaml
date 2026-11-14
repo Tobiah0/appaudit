@@ -1,0 +1,183 @@
+group: Windows settings for your account
+defaults:
+  source: https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services
+switches:
+  - id: win.advertising-id
+    title: Advertising ID
+    explain: Windows gives each account an ID that apps use to build an ad profile across apps.
+    breaks: Ads in apps become less targeted. Nothing else changes.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo', value: Enabled, private: 0, default: 1}
+  - id: win.tailored-experiences
+    title: Tailored experiences from diagnostic data
+    explain: Lets Microsoft use the diagnostic data from this PC to personalise tips, ads and recommendations.
+    breaks: Tips and recommendations stop being personalised.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\Privacy', value: TailoredExperiencesWithDiagnosticDataEnabled, private: 0, default: 1}
+  - id: win.language-list
+    title: Websites can read your language list
+    explain: Browsers share the languages installed on this PC with websites, which helps fingerprint you.
+    breaks: Some sites may not pick your language automatically.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Control Panel\International\User Profile', value: HttpAcceptLanguageOptOut, private: 1, default: 0}
+  - id: win.app-launch-tracking
+    title: App launch tracking
+    explain: Windows records every program you start to rank Start menu and search results.
+    breaks: The "most used" list in Start goes empty. This tool also loses its "last opened by you" history for apps.
+    risk: medium
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: Start_TrackProgs, private: 0, default: 1}
+  - id: win.settings-suggestions
+    title: Suggested content in Settings
+    explain: Windows downloads promotional suggestions and shows them inside the Settings app.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-338393Enabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-353694Enabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-353696Enabled, private: 0, default: 1}
+  - id: win.tips
+    title: Tips and suggestions while using Windows
+    explain: Windows fetches tips, tricks and product suggestions from Microsoft and shows them as notifications.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-338389Enabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SoftLandingEnabled, private: 0, default: 1}
+  - id: win.start-suggestions
+    title: App suggestions in Start
+    explain: Start shows promoted apps downloaded from Microsoft's content service.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-338388Enabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SystemPaneSuggestionsEnabled, private: 0, default: 1}
+  - id: win.silent-app-installs
+    title: Promoted apps installed without asking
+    explain: Windows can install suggested Store apps and manufacturer apps in the background.
+    breaks: Nothing. Apps already installed stay.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SilentInstalledAppsEnabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: PreInstalledAppsEnabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: OemPreInstalledAppsEnabled, private: 0, default: 1}
+  - id: win.lock-screen-tips
+    title: Fun facts and tips on the lock screen
+    explain: The lock screen downloads promotional text and tips from Microsoft.
+    breaks: Nothing. Your lock screen picture is not affected.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: RotatingLockScreenOverlayEnabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-338387Enabled, private: 0, default: 1}
+  - id: win.welcome-experience
+    title: Welcome experience after updates
+    explain: After an update Windows shows a full-screen page that promotes Microsoft services.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', value: SubscribedContent-310093Enabled, private: 0, default: 1}
+  - id: win.finish-setup-nag
+    title: '"Finish setting up your device" prompts'
+    explain: Windows periodically asks you to sign in to more Microsoft services.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement', value: ScoobeSystemSettingEnabled, private: 0, default: 1}
+  - id: win.start-recommendations
+    title: Recommendations in the Start menu
+    explain: The Recommended section of Start shows tips, shortcuts and promoted apps.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: Start_IrisRecommendations, private: 0, default: 1}
+  - id: win.explorer-ads
+    title: Sync provider ads in File Explorer
+    explain: File Explorer shows banners that promote OneDrive and Microsoft 365.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', value: ShowSyncProviderNotifications, private: 0, default: 1}
+  - id: win.feedback-requests
+    title: Feedback requests
+    explain: Windows asks you to rate features and sends the answers to Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Siuf\Rules', value: NumberOfSIUFInPeriod, private: 0}
+  - id: win.inking-typing
+    title: Inking and typing personalisation
+    explain: Windows collects what you type and write to build a personal dictionary, and can send samples to Microsoft.
+    breaks: Text suggestions become less personal.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\InputPersonalization', value: RestrictImplicitInkCollection, private: 1, default: 0}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\InputPersonalization', value: RestrictImplicitTextCollection, private: 1, default: 0}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\InputPersonalization\TrainedDataStore', value: HarvestContacts, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Personalization\Settings', value: AcceptedPrivacyPolicy, private: 0, default: 1}
+  - id: win.typing-insights
+    title: Send typing data to improve typing
+    explain: Sends samples of your typing and handwriting to Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Input\TIPC', value: Enabled, private: 0, default: 1}
+  - id: win.online-speech
+    title: Online speech recognition
+    explain: Sends your voice to Microsoft for dictation and voice features.
+    breaks: Voice typing and dictation that rely on the cloud stop working.
+    risk: medium
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy', value: HasAccepted, private: 0, default: 0}
+  - id: win.bing-in-start
+    title: Web results in Start menu search
+    explain: Everything you type into Start search is sent to Bing.
+    breaks: Start search shows only local results.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\Explorer', value: DisableSearchBoxSuggestions, private: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\Search', value: BingSearchEnabled, private: 0, default: 1}
+    expect: {domains: [bing.com]}
+  - id: win.search-highlights
+    title: Search highlights
+    explain: The search box downloads daily promotional content from Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: IsDynamicSearchBoxEnabled, private: 0, default: 1}
+  - id: win.cloud-search
+    title: Search your Microsoft account content
+    explain: Windows Search queries OneDrive, Outlook and other cloud services with what you type.
+    breaks: Start search no longer finds files that are only in the cloud.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: IsMSACloudSearchEnabled, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: IsAADCloudSearchEnabled, private: 0, default: 1}
+  - id: win.search-history
+    title: Search history on this device
+    explain: Windows stores what you search for to improve suggestions.
+    breaks: Past searches are no longer suggested.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\SearchSettings', value: IsDeviceSearchHistoryEnabled, private: 0, default: 1}
+  - id: win.cloud-clipboard
+    title: Clipboard sync across devices
+    explain: Uploads what you copy to Microsoft so it can be pasted on your other devices.
+    breaks: Copy on one device and paste on another stops working.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Clipboard', value: EnableCloudClipboard, private: 0, default: 0}
+  - id: win.shared-experiences
+    title: Share across devices
+    explain: Lets apps on your other devices open apps and send messages on this PC through Microsoft's servers.
+    breaks: Continue-on-PC and nearby sharing with your other devices.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\CDP', value: RomeSdkChannelUserAuthzPolicy, private: 0, default: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\CDP', value: CdpSessionUserAuthzPolicy, private: 0, default: 1}
+  - id: win.app-diagnostics-access
+    title: Apps can read diagnostic information about other apps
+    explain: Store apps may read which other apps are running and how they behave.
+    breaks: A few system utilities from the Store show less detail.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\appDiagnostics', value: Value, kind: string, private: Deny, default: Allow}
+  - id: win.account-info-access
+    title: Apps can read your name and account picture
+    explain: Store apps may read your account name, picture and other account details.
+    breaks: Some apps ask for your name instead of filling it in.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userAccountInformation', value: Value, kind: string, private: Deny, default: Allow}
+  - id: win.tailored-experiences-policy
+    title: Tailored experiences (policy for your account)
+    explain: The policy form of the tailored-experiences switch. It also stops Windows turning the setting back on.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\CloudContent', value: DisableTailoredExperiencesWithDiagnosticData, private: 1}
+  - id: win.spotlight-policy
+    title: Windows Spotlight
+    explain: Spotlight downloads lock-screen pictures, ads and suggestions from Microsoft.
+    breaks: The lock screen stops rotating Microsoft's pictures; your own picture still works.
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\CloudContent', value: DisableWindowsSpotlightFeatures, private: 1}
+    expect: {domains: [arc.msn.com, iris.microsoft.com]}

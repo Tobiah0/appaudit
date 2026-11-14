@@ -141,6 +141,90 @@ def post_helper_stop() -> dict:
         raise HTTPException(409, str(error)) from error
 
 
+# --- switches --------------------------------------------------------------------------------
+# These endpoints change Windows settings. They run only when the person at the PC presses a
+# button in the dashboard, and only for changes that the catalogue describes.
+
+def _helper(command: dict) -> dict:
+    from .helper import pipe
+
+    try:
+        reply = pipe.send(command, timeout_ms=8000)
+    except ConnectionError as error:
+        raise HTTPException(409, "This switch needs administrator rights. Start watching first, "
+                                 "which starts the helper that applies it.") from error
+    if not reply.get("ok"):
+        raise HTTPException(500, reply.get("error", "the helper refused the command"))
+    return reply
+
+
+def _switch(switch_id: str):
+    from . import switches
+
+    switch = switches.load_catalogue().get(switch_id)
+    if switch is None:
+        raise HTTPException(404, "unknown switch")
+    return switch
+
+
+@app.get("/api/switches")
+def get_switches() -> dict:
+    from . import switches
+
+    def build() -> dict:
+        states = [switches.state(item) for item in switches.load_catalogue().values()]
+        counts: dict[str, int] = {}
+        for entry in states:
+            counts[entry["state"]] = counts.get(entry["state"], 0) + 1
+        return {"switches": states, "counts": counts, "journal": switches.journal_entries()[:50]}
+
+    return cached(("switches",), 4, build)
+
+
+@app.get("/api/switches/{switch_id}/plan")
+def get_switch_plan(switch_id: str) -> dict:
+    from . import switches
+
+    return {"plan": switches.plan(_switch(switch_id))}
+
+
+@app.post("/api/switches/{switch_id}/apply")
+def post_switch_apply(switch_id: str) -> dict:
+    from . import switches
+
+    switch = _switch(switch_id)
+    planned = switches.plan(switch)
+    result = {"changed": [], "failed": [], "journal_ids": []}
+    if any(change["admin"] for change in planned):
+        reply = _helper({"cmd": "switch_apply", "id": switch_id})
+        result["changed"] += reply["changed"]
+        result["failed"] += reply["failed"]
+        result["journal_ids"].append(reply.get("journal_id"))
+    if any(not change["admin"] for change in planned):
+        local = switches.apply(switch, only_admin=False)
+        result["changed"] += local["changed"]
+        result["failed"] += local["failed"]
+        result["journal_ids"].append(local["journal_id"])
+    _cache.pop(("switches",), None)
+    result["state"] = switches.state(switch)
+    return result
+
+
+@app.post("/api/switches/undo/{entry_id}")
+def post_switch_undo(entry_id: int) -> dict:
+    from . import switches
+
+    entry = next((item for item in switches.journal_entries() if item["id"] == entry_id), None)
+    if entry is None:
+        raise HTTPException(404, "unknown journal entry")
+    if any(change["admin"] for change in entry["changes"]):
+        result = _helper({"cmd": "switch_undo", "entry": entry_id})
+    else:
+        result = switches.undo(entry_id, only_admin=False)
+    _cache.pop(("switches",), None)
+    return result
+
+
 def mount_static() -> None:
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
 

@@ -11,6 +11,8 @@ class Commands:
             "status": self._status,
             "stop": self._stop,
             "packets": self._packets,
+            "switch_apply": self._switch_apply,
+            "switch_undo": self._switch_undo,
         }
 
     def register(self, name: str, handler) -> None:
@@ -28,6 +30,21 @@ class Commands:
     def _stop(self, _request: dict) -> dict:
         self.stop_requested = True
         return {"stopping": True}
+
+    # The caller names a catalogue switch or a journal entry. The values written come from the
+    # catalogue and the journal on this side, never from the request.
+    def _switch_apply(self, request: dict) -> dict:
+        from .. import switches
+
+        switch = switches.load_catalogue().get(str(request.get("id")))
+        if switch is None:
+            raise KeyError("unknown switch")
+        return switches.apply(switch, only_admin=True)
+
+    def _switch_undo(self, request: dict) -> dict:
+        from .. import switches
+
+        return switches.undo(int(request["entry"]), only_admin=True)
 
     def _packets(self, request: dict) -> dict:
         if request.get("on"):

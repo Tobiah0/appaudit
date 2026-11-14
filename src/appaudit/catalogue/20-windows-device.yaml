@@ -1,0 +1,167 @@
+group: Windows settings for the whole PC
+defaults:
+  source: https://learn.microsoft.com/en-us/windows/privacy/manage-connections-from-windows-operating-system-components-to-microsoft-services
+switches:
+  - id: win.diagnostic-level
+    title: Diagnostic data level
+    explain: >
+      How much diagnostic data Windows sends. On Home and Pro the lowest level Windows accepts is
+      "Required"; a value of 0 is treated as Required. Fully off exists only on Enterprise,
+      Education and Server.
+    breaks: Optional diagnostic data is no longer sent. Insider builds need the optional level.
+    note: This lowers the level. To stop Required data on Home, disable the telemetry service below.
+    source: https://learn.microsoft.com/en-us/windows/privacy/configure-windows-diagnostic-data-in-your-organization
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: AllowTelemetry, private: [1, 0]}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection', value: AllowTelemetry, private: [1, 0], default: 3}
+    expect: {services: [DiagTrack], domains: [events.data.microsoft.com, vortex.data.microsoft.com]}
+  - id: win.limit-diagnostic-logs
+    title: Diagnostic log and crash dump collection
+    explain: Microsoft can request extra log files and memory dumps from this PC on top of normal diagnostic data.
+    breaks: Microsoft support has less to work with if you ask them to investigate a problem.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: LimitDiagnosticLogCollection, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: LimitDumpCollection, private: 1}
+  - id: win.onesettings
+    title: Remote changes to what Windows collects
+    explain: Windows downloads rule files from Microsoft that decide which events are collected. Microsoft can change them at any time.
+    breaks: Windows keeps using the rules it already has.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: DisableOneSettingsDownloads, private: 1}
+    expect: {domains: [settings-win.data.microsoft.com]}
+  - id: win.feedback-notifications
+    title: Feedback notifications (policy)
+    explain: Stops Windows from asking for feedback, for every account on this PC.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: DoNotShowFeedbackNotifications, private: 1}
+  - id: win.advertising-id-policy
+    title: Advertising ID (policy for every account)
+    explain: Turns the advertising ID off for every account and stops it being turned back on.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo', value: DisabledByGroupPolicy, private: 1}
+  - id: win.consumer-features
+    title: Microsoft consumer experiences
+    explain: Windows installs promoted apps and shows suggestions from Microsoft's content service.
+    breaks: Nothing.
+    note: Microsoft documents this policy for Enterprise and Education. On Home it may be ignored.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\CloudContent', value: DisableWindowsConsumerFeatures, private: 1}
+  - id: win.activity-history
+    title: Activity history
+    explain: Windows records which apps and files you use and can upload the history to your Microsoft account.
+    breaks: Nothing visible on Windows 11.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\System', value: PublishUserActivities, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\System', value: UploadUserActivities, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\System', value: EnableActivityFeed, private: 0}
+  - id: win.cross-device-clipboard-policy
+    title: Clipboard sync across devices (policy)
+    explain: Stops clipboard contents being uploaded, for every account.
+    breaks: Copy on one device and paste on another stops working.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\System', value: AllowCrossDeviceClipboard, private: 0}
+  - id: win.error-reporting
+    title: Windows Error Reporting
+    explain: When a program crashes, Windows sends a report that can include parts of its memory.
+    breaks: Crash reports are not sent, so "check for a solution" does nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\Windows Error Reporting', value: Disabled, private: 1, default: 0}
+    expect: {processes: [wermgr.exe, werfault.exe], domains: [watson.telemetry.microsoft.com, watson.microsoft.com]}
+  - id: win.ceip
+    title: Customer Experience Improvement Program
+    explain: An older Microsoft programme that collects how you use Windows.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\SQMClient\Windows', value: CEIPEnable, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\SQMClient\Windows', value: CEIPEnable, private: 0, default: 0}
+  - id: win.app-compat-telemetry
+    title: Application compatibility telemetry
+    explain: Windows inventories installed programs and how they run, and reports it for compatibility analysis.
+    breaks: The Program Compatibility Assistant stops offering fixes for old programs.
+    risk: medium
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\AppCompat', value: AITEnable, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\AppCompat', value: DisableInventory, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\AppCompat', value: DisableUAR, private: 1}
+    expect: {processes: [compattelrunner.exe]}
+  - id: win.handwriting-reports
+    title: Handwriting data sharing
+    explain: Sends handwriting recognition samples and error reports to Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\HandwritingErrorReports', value: PreventHandwritingErrorReports, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\TabletPC', value: PreventHandwritingDataSharing, private: 1}
+  - id: win.delivery-optimization
+    title: Sharing updates with other PCs
+    explain: Windows uploads parts of updates you downloaded to other PCs on the internet.
+    breaks: Updates download only from Microsoft, which can be slightly slower.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization', value: DODownloadMode, private: [0, 99, 100]}
+  - id: win.search-web-policy
+    title: Web search and cloud content in Windows Search (policy)
+    explain: Stops Windows Search contacting Bing and the cloud, for every account.
+    breaks: Start search shows only local results.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: ConnectedSearchUseWeb, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: DisableWebSearch, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: AllowCloudSearch, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: EnableDynamicContentInWSB, private: 0}
+  - id: win.cortana-policy
+    title: Cortana
+    explain: The old voice assistant. The policy keeps its remaining components from running.
+    breaks: Nothing on current Windows 11.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\Windows Search', value: AllowCortana, private: 0}
+  - id: win.widgets
+    title: Widgets and news feed
+    explain: The Widgets board loads a personalised MSN feed with ads.
+    breaks: The Widgets board and its taskbar button disappear.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Dsh', value: AllowNewsAndInterests, private: 0}
+    expect: {domains: [msn.com, widgetservice.azurefd.net]}
+  - id: win.online-tips
+    title: Online tips in Settings
+    explain: Settings downloads help text and promotional tips from Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer', value: AllowOnlineTips, private: 0}
+  - id: win.message-sync
+    title: Text message sync
+    explain: Syncs text messages from a linked phone to Microsoft's cloud.
+    breaks: Messages no longer sync between your phone and PC.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\Messaging', value: AllowMessageSync, private: 0}
+  - id: win.maps-auto-update
+    title: Automatic offline map updates
+    explain: Windows contacts Microsoft regularly to update offline maps, even if you never use Maps.
+    breaks: Offline maps are not refreshed.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SYSTEM\Maps', value: AutoUpdateEnabled, private: 0, default: 1}
+  - id: win.font-streaming
+    title: Download fonts on demand
+    explain: Windows fetches missing fonts from Microsoft, which reveals what you are viewing.
+    breaks: Text in rarely used scripts may show in a fallback font.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\System', value: EnableFontProviders, private: 0}
+  - id: win.experimentation
+    title: Microsoft experiments on this PC
+    explain: Lets Microsoft run feature experiments and change settings on this PC to study the effect.
+    breaks: Nothing.
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Microsoft\PolicyManager\current\device\System', value: AllowExperimentation, private: 0}
+  - id: win.location-service
+    title: Location service
+    explain: Windows works out where the PC is and makes it available to apps and to Microsoft.
+    breaks: Maps, weather and "find my device" lose your position. Time zone may not set itself.
+    risk: medium
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\LocationAndSensors', value: DisableLocation, private: 1}
+  - id: win.find-my-device
+    title: Find my device
+    explain: Sends this PC's location to Microsoft regularly so it can be located from your account.
+    breaks: You cannot locate the PC from account.microsoft.com.
+    risk: medium
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\FindMyDevice', value: AllowFindMyDevice, private: 0}

@@ -1,0 +1,70 @@
+group: Other software
+switches:
+  - id: firefox.telemetry
+    title: Firefox telemetry and studies
+    explain: Firefox sends usage data and can enrol you in experiments.
+    breaks: Nothing.
+    source: https://mozilla.github.io/policy-templates/
+    detect: {path: ['%ProgramFiles%\Mozilla Firefox\firefox.exe', '%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableTelemetry, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableFirefoxStudies, private: 1}
+    expect: {processes: [firefox.exe], domains: [telemetry.mozilla.org, normandy.cdn.mozilla.net]}
+  - id: firefox.default-browser-agent
+    title: Firefox default browser agent
+    explain: A scheduled task that reports to Mozilla once a day which browser is your default, even when Firefox is closed.
+    breaks: Nothing.
+    source: https://mozilla.github.io/policy-templates/
+    detect: {path: ['%ProgramFiles%\Mozilla Firefox\firefox.exe', '%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableDefaultBrowserAgent, private: 1}
+    expect: {processes: [default-browser-agent.exe]}
+  - id: chrome.metrics
+    title: Chrome usage statistics and crash reports
+    explain: Chrome sends usage statistics, crash reports and the addresses of pages you visit to Google.
+    breaks: Nothing.
+    source: https://chromeenterprise.google/policies/
+    detect: {path: ['%ProgramFiles%\Google\Chrome\Application\chrome.exe', '%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Google\Chrome', value: MetricsReportingEnabled, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Google\Chrome', value: UrlKeyedAnonymizedDataCollectionEnabled, private: 0}
+    expect: {processes: [chrome.exe]}
+  - id: nvidia.telemetry
+    title: NVIDIA telemetry
+    explain: NVIDIA's software reports hardware, game and usage data.
+    breaks: Nothing. Driver updates still work.
+    source: https://github.com/undergroundwires/privacy.sexy
+    detect: {registry_key: 'HKLM\SOFTWARE\NVIDIA Corporation\Global'}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client', value: OptInOrOutPreference, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\Global\FTS', value: EnableRID44231, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\Global\FTS', value: EnableRID64640, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\Global\FTS', value: EnableRID66610, private: 0}
+    expect: {domains: [events.gfe.nvidia.com, telemetry.gfe.nvidia.com]}
+  - id: adobe.acrobat-usage
+    title: Adobe Acrobat usage measurement
+    explain: Acrobat reports which features you use to Adobe.
+    breaks: Nothing.
+    source: https://www.adobe.com/devnet-docs/acrobatetk/tools/PrefRef/Windows/
+    detect: {path: ['%ProgramFiles%\Adobe\Acrobat DC\Acrobat\Acrobat.exe', '%ProgramFiles(x86)%\Adobe\Acrobat DC\Acrobat\Acrobat.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown', value: bUsageMeasurement, private: 0}
+    expect: {processes: [acrobat.exe], domains: [adobe.io, omtrdc.net]}
+  - id: adobe.acrobat-cloud
+    title: Adobe Acrobat cloud services and upsell
+    explain: Acrobat contacts Adobe's cloud for storage, sign-in prompts and in-app offers.
+    breaks: Adobe cloud storage and "send for signature" inside Acrobat.
+    risk: medium
+    source: https://www.adobe.com/devnet-docs/acrobatetk/tools/PrefRef/Windows/
+    detect: {path: ['%ProgramFiles%\Adobe\Acrobat DC\Acrobat\Acrobat.exe', '%ProgramFiles(x86)%\Adobe\Acrobat DC\Acrobat\Acrobat.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown\cServices', value: bToggleAdobeDocumentServices, private: 1}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown', value: bAcroSuppressUpsell, private: 1}
+  - id: vs.experience-program
+    title: Visual Studio Customer Experience Improvement Program
+    explain: Visual Studio reports how you use it to Microsoft.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/visualstudio/ide/visual-studio-experience-improvement-program
+    detect: {registry_key: 'HKLM\SOFTWARE\Microsoft\VisualStudio'}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\VisualStudio\SQM', value: OptIn, private: 0}

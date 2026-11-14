@@ -1,0 +1,152 @@
+group: Windows services and scheduled tasks
+defaults:
+  source: https://www.bsi.bund.de/dok/12818674
+switches:
+  - id: svc.diagtrack
+    title: Connected User Experiences and Telemetry service
+    explain: >
+      The service that gathers diagnostic events from the whole system and uploads them to
+      Microsoft. Disabling it is the only way to stop Required diagnostic data on Home.
+    breaks: >
+      Diagnostic data and update-failure reports are not sent. Feedback Hub and Insider builds
+      stop working properly. Windows Update itself keeps working.
+    risk: medium
+    checks:
+      - {type: service, name: DiagTrack, private: disabled}
+    expect: {services: [DiagTrack], domains: [events.data.microsoft.com, vortex.data.microsoft.com, settings-win.data.microsoft.com]}
+  - id: svc.dmwappush
+    title: WAP push message routing service
+    explain: Routes device-management push messages; it works together with the telemetry service.
+    breaks: Nothing on a home PC.
+    checks:
+      - {type: service, name: dmwappushservice, private: disabled}
+  - id: svc.whesvc
+    title: Windows Health and Optimized Experiences service
+    explain: >
+      Watches CPU load, power and temperature and records performance traces when the PC is slow.
+      Microsoft says the traces stay on the device unless you send feedback; reports in 2026
+      disputed this.
+    breaks: Adaptive energy saver stops working, and Feedback Hub loses its performance traces.
+    risk: medium
+    source: https://www.neowin.net/reports/what-is-the-viral-whesvc-service-and-should-you-disable-it/
+    checks:
+      - {type: service, name: whesvc, private: disabled}
+    expect: {services: [whesvc]}
+  - id: svc.diagnostics-hub
+    title: Diagnostics Hub collector service
+    explain: Collects detailed performance traces on request from diagnostic tools and from Microsoft.
+    breaks: Visual Studio's performance profiler cannot collect system traces.
+    checks:
+      - {type: service, name: diagnosticshub.standardcollector.service, private: disabled}
+  - id: svc.wer
+    title: Windows Error Reporting service
+    explain: Uploads crash reports, which can include parts of a program's memory.
+    breaks: Crash reports are not sent.
+    checks:
+      - {type: service, name: WerSvc, private: disabled}
+    expect: {services: [WerSvc], processes: [wermgr.exe], domains: [watson.telemetry.microsoft.com]}
+  - id: svc.inventory
+    title: Inventory and Compatibility Appraisal service
+    explain: Lists the programs and devices on this PC for Microsoft's compatibility analysis.
+    breaks: Windows may be slower to learn that an app blocks a feature update.
+    risk: medium
+    checks:
+      - {type: service, name: InventorySvc, private: disabled}
+    expect: {services: [InventorySvc]}
+  - id: svc.maps-broker
+    title: Downloaded Maps Manager
+    explain: Keeps offline maps up to date by contacting Microsoft.
+    breaks: Offline maps are not refreshed.
+    checks:
+      - {type: service, name: MapsBroker, private: disabled}
+  - id: svc.retail-demo
+    title: Retail Demo service
+    explain: Only used by shops to run the PC in demonstration mode.
+    breaks: Nothing.
+    checks:
+      - {type: service, name: RetailDemo, private: disabled}
+  - id: task.compat-appraiser
+    title: Compatibility telemetry tasks
+    explain: Scheduled runs of compattelrunner.exe, which scans installed programs and files and reports to Microsoft.
+    breaks: Nothing day to day. Windows may be slower to learn about update blockers.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser Exp', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Application Experience\MareBackup', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Application Experience\ProgramDataUpdater', private: disabled}
+    expect: {processes: [compattelrunner.exe], tasks: ['\Microsoft\Windows\Application Experience']}
+  - id: task.ceip
+    title: Customer Experience Improvement tasks
+    explain: The "Consolidator" and "UsbCeip" tasks gather usage data for Microsoft's improvement programme.
+    breaks: Nothing.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Customer Experience Improvement Program\Consolidator', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask', private: disabled}
+    expect: {processes: [wsqmcons.exe], tasks: ['\Microsoft\Windows\Customer Experience Improvement Program']}
+  - id: task.device-census
+    title: Device Census
+    explain: devicecensus.exe reports this PC's hardware, settings and usage counts to Microsoft every day.
+    breaks: Nothing.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Device Information\Device', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Device Information\Device User', private: disabled}
+    expect: {processes: [devicecensus.exe], tasks: ['\Microsoft\Windows\Device Information']}
+  - id: task.feedback
+    title: Feedback client tasks
+    explain: Download scenarios that decide when Windows asks you for feedback, and upload the results.
+    breaks: Nothing.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Feedback\Siuf\DmClient', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload', private: disabled}
+    expect: {processes: [dmclient.exe], tasks: ['\Microsoft\Windows\Feedback']}
+  - id: task.feature-usage
+    title: Feature usage reporting
+    explain: Tasks that collect which Windows features you use and hand the counts to the telemetry pipeline.
+    breaks: Nothing.
+    risk: medium
+    note: The other tasks in the same folder manage feature rollouts and are left alone.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReporting', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Flighting\FeatureConfig\UsageDataFlushing', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Flighting\FeatureConfig\UsageDataReceiver', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Flighting\FeatureConfig\BootstrapUsageDataReporting', private: disabled}
+    expect: {tasks: ['\Microsoft\Windows\Flighting\FeatureConfig\UsageData']}
+  - id: task.error-queue
+    title: Error report queue
+    explain: Sends crash reports that were queued while the PC was busy or offline.
+    breaks: Queued crash reports are not sent.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Windows Error Reporting\QueueReporting', private: disabled}
+    expect: {processes: [wermgr.exe], tasks: ['\Microsoft\Windows\Windows Error Reporting']}
+  - id: task.disk-diagnostics
+    title: Disk diagnostic data collector
+    explain: Sends general disk and system information to Microsoft for the improvement programme.
+    breaks: Nothing. Disk failure warnings still work.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector', private: disabled}
+  - id: task.disk-footprint
+    title: Disk footprint diagnostics
+    explain: Records how disk space is used for Microsoft's storage telemetry.
+    breaks: Nothing. Storage Sense is a separate task and keeps working.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\DiskFootprint\Diagnostics', private: disabled}
+  - id: task.sustainability
+    title: Sustainability telemetry
+    explain: Reports power and energy-setting data to Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Sustainability\SustainabilityTelemetry', private: disabled}
+  - id: task.maps
+    title: Maps update and notification tasks
+    explain: Contact Microsoft to refresh offline maps and show map notifications.
+    breaks: Offline maps are not refreshed.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\Maps\MapsUpdateTask', private: disabled}
+      - {type: task, path: '\Microsoft\Windows\Maps\MapsToastTask', private: disabled}
+  - id: task.feedback-toast
+    title: Performance feedback prompt
+    explain: Shows a prompt asking you to send a performance trace to Microsoft.
+    breaks: Nothing.
+    checks:
+      - {type: task, path: '\Microsoft\Windows\PerformanceTrace\ShowFeedbackToast', private: disabled}

@@ -1,0 +1,101 @@
+group: Edge and Office
+switches:
+  - id: edge.diagnostic-data
+    title: Edge diagnostic data
+    explain: Edge sends usage and browsing-related diagnostic data to Microsoft.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: DiagnosticData, private: 0}
+    expect: {processes: [msedge.exe], domains: [browser.events.data.msn.com, events.data.microsoft.com]}
+  - id: edge.personalisation
+    title: Edge personalisation from browsing history
+    explain: Lets Microsoft use your browsing history to personalise ads, search and news.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: PersonalizationReportingEnabled, private: 0}
+  - id: edge.feedback
+    title: Edge feedback and surveys
+    explain: Edge asks for feedback and can send screenshots and diagnostic data with it.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: UserFeedbackAllowed, private: 0}
+  - id: edge.shopping
+    title: Edge shopping assistant
+    explain: Sends the pages you shop on to Microsoft to look up coupons and price comparisons.
+    breaks: Coupons and price history in Edge.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: EdgeShoppingAssistantEnabled, private: 0}
+  - id: edge.recommendations
+    title: Edge recommendations and promotions
+    explain: Edge shows promotional notifications and feature suggestions from Microsoft.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: ShowRecommendationsEnabled, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: SpotlightExperiencesAndRecommendationsEnabled, private: 0}
+  - id: edge.sidebar-copilot
+    title: Edge sidebar and Copilot page access
+    explain: The sidebar hosts Copilot, which can read the page you are on.
+    breaks: The Edge sidebar and Copilot in Edge.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: HubsSidebarEnabled, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: CopilotPageContext, private: 0}
+  - id: edge.navigation-errors
+    title: Edge sends mistyped addresses to Microsoft
+    explain: When a page fails to load, Edge sends the address to a Microsoft service for suggestions.
+    breaks: Edge shows a plain error page.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: AlternateErrorPagesEnabled, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: ResolveNavigationErrorsUseWebService, private: 0}
+  - id: edge.background
+    title: Edge running when closed
+    explain: Startup boost and background mode keep Edge processes running after you close it or before you open it.
+    breaks: Edge opens slightly slower. Extensions and notifications stop when Edge is closed.
+    source: https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies
+    detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
+    checks:
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: StartupBoostEnabled, private: 0}
+      - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: BackgroundModeEnabled, private: 0}
+    expect: {processes: [msedge.exe]}
+  - id: office.telemetry
+    title: Office telemetry
+    explain: Office apps send usage and diagnostic data to Microsoft.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/microsoft-365-apps/privacy/manage-privacy-controls
+    detect: {registry_key: 'HKCU\Software\Microsoft\Office\16.0\Common'}
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\common\clienttelemetry', value: SendTelemetry, private: 3}
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\common\clienttelemetry', value: DisableTelemetry, private: 1}
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\16.0\common', value: qmenable, private: 0}
+  - id: office.connected-experiences
+    title: Office connected experiences that analyse your content
+    explain: Features such as Designer, Editor and Translator send document content to Microsoft.
+    breaks: Those cloud features stop working; editing and saving are unaffected.
+    risk: medium
+    source: https://learn.microsoft.com/en-us/microsoft-365-apps/privacy/manage-privacy-controls
+    detect: {registry_key: 'HKCU\Software\Microsoft\Office\16.0\Common'}
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\16.0\common\privacy', value: usercontentdisabled, private: 2}
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\16.0\common\privacy', value: controllerconnectedservicesenabled, private: 2}
+  - id: office.feedback
+    title: Office feedback and surveys
+    explain: Office asks for feedback and sends it, optionally with screenshots, to Microsoft.
+    breaks: Nothing.
+    source: https://learn.microsoft.com/en-us/microsoft-365-apps/privacy/manage-privacy-controls
+    detect: {registry_key: 'HKCU\Software\Microsoft\Office\16.0\Common'}
+    checks:
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\16.0\common\feedback', value: enabled, private: 0}
+      - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\office\16.0\common\feedback', value: surveyenabled, private: 0}

@@ -1,0 +1,58 @@
+group: Developer tools
+# Each of these is an environment variable for your account. Tools read it the next time they start.
+defaults:
+  breaks: Nothing.
+  source: https://github.com/beatcracker/toptout
+switches:
+  - {id: dev.do-not-track, title: 'DO_NOT_TRACK (shared opt-out)', explain: A convention many command-line tools honour as a general telemetry opt-out.,
+     source: 'https://consoledonottrack.com/', checks: [{type: env, name: DO_NOT_TRACK, private: '1'}]}
+  - {id: dev.dotnet, detect: {command: dotnet}, title: .NET SDK telemetry, explain: The dotnet command reports which commands you run to Microsoft.,
+     checks: [{type: env, name: DOTNET_CLI_TELEMETRY_OPTOUT, private: ['1', 'true']}]}
+  - {id: dev.powershell, detect: {command: pwsh}, title: PowerShell 7 telemetry, explain: PowerShell 7 reports start-up and usage data to Microsoft.,
+     checks: [{type: env, name: POWERSHELL_TELEMETRY_OPTOUT, private: ['1', 'true', 'yes']}]}
+  - {id: dev.nextjs, detect: {command: node}, title: Next.js telemetry, explain: Next.js reports build and feature usage to Vercel.,
+     checks: [{type: env, name: NEXT_TELEMETRY_DISABLED, private: '1'}]}
+  - {id: dev.angular, detect: {command: node}, title: Angular CLI analytics, explain: The Angular CLI reports command usage to Google.,
+     checks: [{type: env, name: NG_CLI_ANALYTICS, private: 'false'}]}
+  - {id: dev.gatsby, detect: {command: node}, title: Gatsby telemetry, explain: Gatsby reports command usage.,
+     checks: [{type: env, name: GATSBY_TELEMETRY_DISABLED, private: '1'}]}
+  - {id: dev.azure-cli, detect: {command: az}, title: Azure CLI telemetry, explain: The az command reports usage to Microsoft.,
+     checks: [{type: env, name: AZURE_CORE_COLLECT_TELEMETRY, private: ['0', 'false', 'no']}]}
+  - {id: dev.azure-functions, detect: {command: func}, title: Azure Functions Core Tools telemetry, explain: The func command reports usage to Microsoft.,
+     checks: [{type: env, name: FUNCTIONS_CORE_TOOLS_TELEMETRY_OPTOUT, private: ['1', 'true']}]}
+  - {id: dev.huggingface, detect: {command: [python, huggingface-cli]}, title: Hugging Face Hub telemetry, explain: Hugging Face libraries report usage data.,
+     checks: [{type: env, name: HF_HUB_DISABLE_TELEMETRY, private: '1'}]}
+  - {id: dev.aws-sam, detect: {command: sam}, title: AWS SAM CLI telemetry, explain: The sam command reports usage to Amazon.,
+     checks: [{type: env, name: SAM_CLI_TELEMETRY, private: '0'}]}
+  - {id: dev.stripe, detect: {command: stripe}, title: Stripe CLI telemetry, explain: The stripe command reports usage.,
+     checks: [{type: env, name: STRIPE_CLI_TELEMETRY_OPTOUT, private: ['1', 'true']}]}
+  - {id: dev.vcpkg, detect: {command: vcpkg}, title: vcpkg metrics, explain: vcpkg reports usage to Microsoft.,
+     checks: [{type: env, name: VCPKG_DISABLE_METRICS, private: '1'}]}
+  - {id: dev.astro, detect: {command: node}, title: Astro telemetry, explain: Astro reports command usage.,
+     checks: [{type: env, name: ASTRO_TELEMETRY_DISABLED, private: '1'}]}
+  - {id: dev.nuxt, detect: {command: node}, title: Nuxt telemetry, explain: Nuxt reports command and module usage.,
+     checks: [{type: env, name: NUXT_TELEMETRY_DISABLED, private: '1'}]}
+  - {id: dev.storybook, detect: {command: node}, title: Storybook telemetry, explain: Storybook reports usage data.,
+     checks: [{type: env, name: STORYBOOK_DISABLE_TELEMETRY, private: '1'}]}
+  - {id: dev.turborepo, detect: {command: node}, title: Turborepo telemetry, explain: Turborepo reports usage to Vercel.,
+     checks: [{type: env, name: TURBO_TELEMETRY_DISABLED, private: '1'}]}
+  - {id: dev.yarn, detect: {command: [yarn, node]}, title: Yarn telemetry, explain: Yarn 2 and later report usage data.,
+     checks: [{type: env, name: YARN_ENABLE_TELEMETRY, private: ['0', 'false']}]}
+  - {id: dev.gcloud, detect: {command: gcloud}, title: Google Cloud SDK usage reporting, explain: The gcloud command reports usage to Google.,
+     checks: [{type: env, name: CLOUDSDK_CORE_DISABLE_USAGE_REPORTING, private: 'true'}]}
+  - {id: dev.checkpoint, detect: {command: [terraform, vagrant, node]}, title: HashiCorp and Prisma update check-ins, explain: 'Terraform, Vagrant, Prisma and others call a "checkpoint" service that records the tool version and platform.',
+     checks: [{type: env, name: CHECKPOINT_DISABLE, private: '1'}]}
+  - {id: dev.wrangler, detect: {command: node}, title: Cloudflare Wrangler metrics, explain: The wrangler command reports usage to Cloudflare.,
+     checks: [{type: env, name: WRANGLER_SEND_METRICS, private: 'false'}]}
+  - {id: dev.expo, detect: {command: node}, title: Expo CLI telemetry, explain: The Expo CLI reports usage data.,
+     checks: [{type: env, name: EXPO_NO_TELEMETRY, private: '1'}]}
+  - {id: dev.claude-code, detect: {command: claude}, title: Claude Code telemetry, explain: Claude Code reports usage statistics to Anthropic.,
+     source: 'https://docs.claude.com/en/docs/claude-code/data-usage', checks: [{type: env, name: DISABLE_TELEMETRY, private: '1'}]}
+  - {id: dev.streamlit, detect: {command: [streamlit, python]}, title: Streamlit usage statistics, explain: Streamlit apps report usage statistics.,
+     checks: [{type: env, name: STREAMLIT_BROWSER_GATHER_USAGE_STATS, private: 'false'}]}
+  - {id: dev.meilisearch, detect: {command: meilisearch}, title: Meilisearch analytics, explain: Meilisearch reports usage data.,
+     checks: [{type: env, name: MEILI_NO_ANALYTICS, private: 'true'}]}
+  - {id: dev.hasura, detect: {command: hasura}, title: Hasura telemetry, explain: The Hasura CLI and engine report usage data.,
+     checks: [{type: env, name: HASURA_GRAPHQL_ENABLE_TELEMETRY, private: 'false'}]}
+  - {id: dev.scarf, detect: {command: node}, title: Scarf package analytics, explain: 'Some npm packages report installs through Scarf.',
+     checks: [{type: env, name: SCARF_ANALYTICS, private: 'false'}]}
