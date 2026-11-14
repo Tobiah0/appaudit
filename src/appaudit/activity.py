@@ -118,7 +118,8 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
         if actor is None:
             actor = actors[actor_info["id"]] = {
                 **actor_info, "sent": 0, "received": 0, "first": row["first"], "last": row["last"],
-                "destinations": {}, "processes": set(), "runs": set(), "tasks": set(), "categories": defaultdict(int)}
+                "destinations": {}, "processes": set(), "runs": set(), "tasks": set(), "exes": set(),
+                "categories": defaultdict(int)}
         destination = destination_cache.get(row["remote"])
         if destination is None:
             destination = destination_cache[row["remote"]] = labels.for_destination(row["remote"], names.get(row["remote"], []))
@@ -128,6 +129,8 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
         actor["first"] = min(actor["first"], row["first"])
         actor["last"] = max(actor["last"], row["last"])
         actor["processes"].add(proc["name"])
+        if proc.get("exe"):
+            actor["exes"].add(proc["exe"])
         actor["runs"].add(proc["id"])
         if proc.get("task"):
             actor["tasks"].add(proc["task"])
@@ -173,7 +176,7 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
             item["ports"] = sorted(item["ports"])
             item["addresses"] = sorted(item["addresses"])[:4]
         actor.update(destinations=destinations[:60], destination_count=len(destinations),
-                     processes=sorted(actor["processes"]), runs=len(actor["runs"]), tasks=sorted(actor["tasks"]),
+                     processes=sorted(actor["processes"]), exes=sorted(actor["exes"])[:8], runs=len(actor["runs"]), tasks=sorted(actor["tasks"]),
                      categories=dict(actor["categories"]),
                      reporting_sent=sum(item["sent"] for item in destinations if item["category"] in labels.REPORTING))
         actor_list.append(actor)

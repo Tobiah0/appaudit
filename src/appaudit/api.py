@@ -225,6 +225,32 @@ def post_switch_undo(entry_id: int) -> dict:
     return result
 
 
+# --- per-app network blocks -------------------------------------------------------------------
+
+@app.get("/api/blocks")
+def get_blocks() -> dict:
+    from . import blocks
+
+    return {"blocks": blocks.active()}
+
+
+@app.post("/api/blocks")
+async def post_block(request: Request) -> dict:
+    from . import blocks
+
+    body = await request.json()
+    try:
+        blocks.validate(str(body.get("exe", "")))
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    return _helper({"cmd": "block_add", "exe": body["exe"]})
+
+
+@app.post("/api/blocks/{entry_id}/remove")
+def post_block_remove(entry_id: int) -> dict:
+    return _helper({"cmd": "block_remove", "id": entry_id})
+
+
 # --- proof, Windows telemetry, trace sessions ---------------------------------------------------
 
 @app.get("/api/proof")

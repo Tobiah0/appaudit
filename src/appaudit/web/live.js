@@ -2,7 +2,7 @@
 
 // Navigation, the watcher status, and the three live pages: Activity, Companies, Background runs.
 
-const live = { data: null, hours: 24, search: "", hideSystem: false, reportingOnly: false, open: null,
+const live = { blocks: [], data: null, hours: 24, search: "", hideSystem: false, reportingOnly: false, open: null,
                processes: [], procSystem: true, procSearch: "" };
 
 const CATEGORY_TITLES = {
@@ -137,6 +137,8 @@ function actorDetail(actor) {
   facts.push(el("li", { text: `${plural(actor.runs, "process run")} in this window; first seen ${clock(actor.first)}` }));
   return el("tr", { class: "detail" }, el("td", { colspan: "6" },
     el("ul", { class: "facts" }, facts),
+    blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
+      el("div", { class: "sub", text: "Adds an outgoing block rule for the program in Windows Firewall. You can remove it here or in Windows." }), blockRows) : null,
     el("div", { class: "scroll" }, el("table", { class: "inner" },
       el("thead", {}, el("tr", {}, ["Destination", "Company", "Kind", "What it is for", "Sent", "Received", "Last"].map((t) => el("th", { text: t })))),
       el("tbody", {}, rows))),
@@ -195,6 +197,7 @@ function renderCompanies() {
 async function loadLive() {
   try {
     live.data = await (await fetch(`/api/live?hours=${live.hours}`)).json();
+    live.blocks = (await (await fetch("/api/blocks")).json()).blocks;
     renderLive();
   } catch (error) { /* keep the previous view */ }
 }

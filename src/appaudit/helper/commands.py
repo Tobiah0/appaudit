@@ -15,6 +15,8 @@ class Commands:
             "packets": self._packets,
             "switch_apply": self._switch_apply,
             "switch_undo": self._switch_undo,
+            "block_add": self._block_add,
+            "block_remove": self._block_remove,
             "trace_sessions": lambda _request: inspect.trace_sessions(),
             "windows_telemetry": lambda _request: inspect.windows_telemetry(),
             "transcript": lambda request: inspect.transcript(min(int(request.get("limit", 200)), 1000)),
@@ -50,6 +52,17 @@ class Commands:
         from .. import switches
 
         return switches.undo(int(request["entry"]), only_admin=True)
+
+    # The path is validated in blocks.add: a real .exe outside the Windows folder, nothing else.
+    def _block_add(self, request: dict) -> dict:
+        from .. import blocks
+
+        return blocks.add(str(request.get("exe", "")))
+
+    def _block_remove(self, request: dict) -> dict:
+        from .. import blocks
+
+        return blocks.remove(int(request["id"]))
 
     def _packets(self, request: dict) -> dict:
         if request.get("on"):
