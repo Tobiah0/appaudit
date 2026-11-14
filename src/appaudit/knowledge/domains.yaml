@@ -1,0 +1,363 @@
+# Destinations the dashboard can explain. Longest matching suffix wins.
+# category: telemetry | advertising | update | content | cloud | sign-in | security | sync |
+#           communication | gaming | cdn | connectivity | store | ai | developer | licensing
+# "breaks" says what stops working if the destination is blocked; for Microsoft entries it follows
+# Microsoft's "Connection endpoints for Windows 11" page.
+
+- company: Microsoft
+  category: telemetry
+  purpose: Windows diagnostic data upload (Connected User Experiences and Telemetry)
+  breaks: Diagnostic and usage data is not sent to Microsoft. Update-failure reports are not sent either.
+  suffixes: [v10.events.data.microsoft.com, v10c.events.data.microsoft.com, v10.vortex-win.data.microsoft.com,
+             v20.events.data.microsoft.com, self.events.data.microsoft.com, functional.events.data.microsoft.com,
+             vortex.data.microsoft.com, vortex-win.data.microsoft.com, events.data.microsoft.com,
+             mobile.events.data.microsoft.com, browser.events.data.msn.com, browser.events.data.microsoft.com,
+             pipe.aria.microsoft.com, telemetry.microsoft.com, events-sandbox.data.microsoft.com]
+- company: Microsoft
+  category: telemetry
+  purpose: Windows Error Reporting and crash analysis
+  breaks: Crash and error reports are not sent to Microsoft.
+  suffixes: [watson.telemetry.microsoft.com, watson.microsoft.com, umwatsonc.events.data.microsoft.com,
+             kmwatsonc.events.data.microsoft.com, oca.telemetry.microsoft.com, oca.microsoft.com,
+             telecommand.telemetry.microsoft.com, watsonc.events.data.microsoft.com]
+- company: Microsoft
+  category: telemetry
+  purpose: Remote configuration of what Windows collects (OneSettings)
+  breaks: Windows stops receiving new diagnostic settings; it keeps the last ones it downloaded.
+  suffixes: [settings-win.data.microsoft.com, settings.data.microsoft.com]
+- company: Microsoft
+  category: telemetry
+  purpose: Office and Microsoft 365 usage and diagnostic data
+  suffixes: [ecs.office.com, nexus.officeapps.live.com, nexusrules.officeapps.live.com, config.office.com,
+             officeclient.microsoft.com, ecs.nel.measure.office.net, config.edge.skype.com,
+             teams.events.data.microsoft.com, telemetry.urs.microsoft.com]
+- company: Microsoft
+  category: telemetry
+  purpose: Visual Studio and VS Code usage data
+  suffixes: [dc.services.visualstudio.com, vortex.data.msn.com, dc.applicationinsights.azure.com,
+             applicationinsights.azure.com, visualstudio-devdiv-c2s.msedge.net, vscode-sync.trafficmanager.net,
+             default.exp-tas.com]
+- company: Microsoft
+  category: update
+  purpose: Windows Update and Delivery Optimization
+  breaks: The PC cannot download Windows and security updates.
+  suffixes: [windowsupdate.com, update.microsoft.com, delivery.mp.microsoft.com, dl.delivery.mp.microsoft.com,
+             do.dsp.mp.microsoft.com, tsfe.trafficshaping.dsp.mp.microsoft.com, definitionupdates.microsoft.com,
+             api.cdp.microsoft.com, adl.windows.com, sls.update.microsoft.com]
+- company: Microsoft
+  category: security
+  purpose: Microsoft Defender cloud protection and SmartScreen reputation checks
+  breaks: Defender loses cloud-based protection; SmartScreen warnings stop appearing.
+  suffixes: [wdcp.microsoft.com, wdcpalt.microsoft.com, smartscreen-prod.microsoft.com, smartscreen.microsoft.com,
+             checkappexec.microsoft.com, urs.microsoft.com, wd.microsoft.com]
+- company: Microsoft
+  category: security
+  purpose: Certificate trust lists and revocation checks
+  breaks: Apps and websites may stop working when they cannot refresh root certificates.
+  suffixes: [ctldl.windowsupdate.com, crl.microsoft.com, ocsp.msocsp.com, oneocsp.microsoft.com, www.microsoft.com]
+- company: Microsoft
+  category: sign-in
+  purpose: Microsoft account and work account sign-in
+  breaks: Signing in with a Microsoft account stops working.
+  suffixes: [login.live.com, login.microsoftonline.com, account.live.com, msauth.net, msftauth.net,
+             login.windows.net, microsoftonline.com, logincdn.msauth.net]
+- company: Microsoft
+  category: store
+  purpose: Microsoft Store and app licensing
+  breaks: Store apps cannot be installed or updated; app licences may fail to renew.
+  suffixes: [storeedgefd.dsx.mp.microsoft.com, displaycatalog.mp.microsoft.com, licensing.mp.microsoft.com,
+             store-images.s-microsoft.com, storecatalogrevocation.storequality.microsoft.com,
+             livetileedge.dsx.mp.microsoft.com, manage.devcenter.microsoft.com]
+- company: Microsoft
+  category: communication
+  purpose: Windows push notifications
+  breaks: Push notifications stop, including live tiles and some app alerts.
+  suffixes: [wns.windows.com, notify.windows.com]
+- company: Microsoft
+  category: advertising
+  purpose: Windows Spotlight, suggested content, tips and MSN feed
+  breaks: Lock-screen images, suggested apps and tips are not downloaded.
+  suffixes: [arc.msn.com, ris.api.iris.microsoft.com, fd.api.iris.microsoft.com, api.msn.com, assets.msn.com,
+             ntp.msn.com, srtb.msn.com, c.msn.com, www.msn.com, staticview.msn.com, iris.microsoft.com,
+             widgetservice.azurefd.net, widgetcdn.azureedge.net, adsdk.microsoft.com, ads.msn.com,
+             adnxs.com, bat.bing.com, c.bing.com]
+- company: Microsoft
+  category: content
+  purpose: Bing and Windows search suggestions
+  suffixes: [bing.com, bing.net, bingapis.com]
+- company: Microsoft
+  category: connectivity
+  purpose: Network connectivity check (decides whether Windows shows "connected")
+  breaks: The network icon shows a warning even though the connection works.
+  suffixes: [msftconnecttest.com, msftncsi.com]
+- company: Microsoft
+  category: sync
+  purpose: OneDrive file sync
+  suffixes: [onedrive.live.com, g.live.com, oneclient.sfx.ms, storage.live.com, onedrive.com, 1drv.com,
+             files.1drv.com, sharepoint.com]
+- company: Microsoft
+  category: update
+  purpose: Microsoft Edge updates and configuration
+  suffixes: [edge.microsoft.com, msedge.api.cdp.microsoft.com, config.edge.skype.com, iecvlist.microsoft.com]
+- company: Microsoft
+  category: gaming
+  purpose: Xbox Live and Gaming Services
+  suffixes: [xboxlive.com, xboxservices.com, xbox.com, gamepass.com, xboxab.com]
+- company: Microsoft
+  category: ai
+  purpose: Copilot and Bing chat
+  suffixes: [copilot.microsoft.com, sydney.bing.com, copilot.cloud.microsoft]
+- company: Microsoft
+  category: content
+  purpose: Location, maps and weather services
+  suffixes: [inference.location.live.net, maps.windows.com, virtualearth.net, tile-service.weather.microsoft.com]
+- company: Microsoft
+  category: communication
+  purpose: Teams, Skype and Outlook
+  suffixes: [teams.microsoft.com, teams.live.com, skype.com, outlook.com, office365.com, outlook.office.com,
+             trouter.teams.microsoft.com]
+- company: Microsoft
+  category: developer
+  purpose: GitHub
+  suffixes: [github.com, githubusercontent.com, githubassets.com, github.io, ghcr.io]
+- company: Microsoft
+  category: cloud
+  purpose: Microsoft network and Azure hosting (the service behind it is not known)
+  suffixes: [microsoft.com, windows.com, windows.net, azure.com, azureedge.net, azurefd.net, msedge.net,
+             live.com, live.net, office.com, office.net, s-microsoft.com, trafficmanager.net, cloudapp.net,
+             azure-api.net, msn.com, a-msedge.net, sfx.ms, microsoft]
+
+- company: Google
+  category: telemetry
+  purpose: Google Analytics, Firebase and crash reporting
+  suffixes: [google-analytics.com, analytics.google.com, app-measurement.com, firebaseinstallations.googleapis.com,
+             firebaselogging-pa.googleapis.com, crashlytics.com, firebase-settings.crashlytics.com,
+             clientservices.googleapis.com, play.googleapis.com]
+- company: Google
+  category: advertising
+  purpose: Google advertising
+  suffixes: [doubleclick.net, googlesyndication.com, googleadservices.com, googletagmanager.com,
+             googletagservices.com, adservice.google.com, g.doubleclick.net]
+- company: Google
+  category: update
+  purpose: Google software updates (Chrome, Google Updater)
+  suffixes: [update.googleapis.com, tools.google.com, dl.google.com, edgedl.me.gvt1.com, gvt1.com, gvt2.com]
+- company: Google
+  category: cloud
+  purpose: Google services
+  suffixes: [google.com, googleapis.com, gstatic.com, googleusercontent.com, youtube.com, ytimg.com,
+             googlevideo.com, ggpht.com, withgoogle.com, 1e100.net, google]
+
+- company: Mozilla
+  category: telemetry
+  purpose: Firefox usage data, crash reports and experiments
+  suffixes: [incoming.telemetry.mozilla.org, telemetry.mozilla.org, crash-stats.mozilla.org,
+             normandy.cdn.mozilla.net, classify-client.services.mozilla.com, experiments.mozilla.org,
+             firefox.settings.services.mozilla.com, merino.services.mozilla.com]
+- company: Mozilla
+  category: update
+  purpose: Firefox updates and add-on checks
+  suffixes: [aus5.mozilla.org, download.mozilla.org, archive.mozilla.org, addons.mozilla.org,
+             versioncheck.addons.mozilla.org, ciscobinary.openh264.org, download-installer.cdn.mozilla.net]
+- company: Mozilla
+  category: connectivity
+  purpose: Firefox captive-portal check
+  suffixes: [detectportal.firefox.com]
+- company: Mozilla
+  category: cloud
+  purpose: Mozilla services
+  suffixes: [mozilla.org, mozilla.com, mozilla.net, firefox.com, mozgcp.net]
+
+- company: Adobe
+  category: telemetry
+  purpose: Adobe usage analytics and licence checks
+  suffixes: [cc-api-data.adobe.io, adobedtm.com, omtrdc.net, demdex.net, 2o7.net, sstats.adobe.com,
+             genuine.adobe.com, prod.adobegenuine.com, lcs-cops.adobe.io, ic.adobe.io, assets.adobedtm.com]
+- company: Adobe
+  category: update
+  purpose: Adobe updates
+  suffixes: [armmf.adobe.com, acroipm2.adobe.com, ardownload2.adobe.com, ccmdl.adobe.com, swupmf.adobe.com]
+- company: Adobe
+  category: cloud
+  purpose: Adobe services
+  suffixes: [adobe.com, adobe.io, adobelogin.com, adobecc.com, adobe.net, typekit.net]
+
+- company: NVIDIA
+  category: telemetry
+  purpose: NVIDIA app usage data
+  suffixes: [events.gfe.nvidia.com, telemetry.gfe.nvidia.com, gfwsl.geforce.com, nvidia.tt.omtrdc.net,
+             ls.dtrace.nvidia.com, images.nvidiagrid.net]
+- company: NVIDIA
+  category: update
+  purpose: NVIDIA driver and app updates
+  suffixes: [nvidia.com, geforce.com, nvidia.partners, nvidiagrid.net]
+
+- company: Valve
+  category: gaming
+  purpose: Steam store, game traffic and updates
+  suffixes: [steampowered.com, steamcommunity.com, steamstatic.com, steamcontent.com, steamusercontent.com,
+             valvesoftware.com, steamserver.net, steam-chat.com]
+- company: Spotify
+  category: telemetry
+  purpose: Spotify usage logging
+  suffixes: [gew1-spclient.spotify.com, spclient.wg.spotify.com, log.spotify.com, analytics.spotify.com]
+- company: Spotify
+  category: content
+  purpose: Spotify streaming
+  suffixes: [spotify.com, scdn.co, spotifycdn.com, spotify.net, pscdn.co, audio-ak-spotify-com.akamaized.net]
+- company: Discord
+  category: communication
+  purpose: Discord chat and voice
+  suffixes: [discord.com, discordapp.com, discord.gg, discordapp.net, discord.media]
+- company: Slack
+  category: communication
+  purpose: Slack messaging
+  suffixes: [slack.com, slack-edge.com, slackb.com, slack-imgs.com]
+- company: Zoom
+  category: communication
+  purpose: Zoom meetings and update checks
+  suffixes: [zoom.us, zoom.com, zoomgov.com, zmtr.us]
+- company: Notion
+  category: sync
+  purpose: Notion workspace sync
+  suffixes: [notion.so, notion.com, notion-static.com]
+- company: Dropbox
+  category: sync
+  purpose: Dropbox file sync
+  suffixes: [dropbox.com, dropboxapi.com, dropboxstatic.com, dropbox-dns.com, dropboxusercontent.com]
+- company: Anthropic
+  category: ai
+  purpose: Claude
+  suffixes: [anthropic.com, claude.ai, claude.com, claudeusercontent.com]
+- company: OpenAI
+  category: ai
+  purpose: ChatGPT and the OpenAI API
+  suffixes: [openai.com, chatgpt.com, oaistatic.com, oaiusercontent.com]
+- company: Parsec
+  category: communication
+  purpose: Parsec remote desktop
+  suffixes: [parsec.app, parsecgaming.com, parsec.gg]
+- company: Docker
+  category: developer
+  purpose: Docker Desktop and image downloads
+  suffixes: [docker.com, docker.io, dockerusercontent.com]
+- company: Python Software Foundation
+  category: developer
+  purpose: Python package downloads
+  suffixes: [pypi.org, pythonhosted.org, python.org]
+- company: Logitech
+  category: update
+  purpose: Logitech software updates and usage data
+  suffixes: [logitech.com, logi.com, logitechg.com, logitech.io]
+- company: Corsair
+  category: update
+  purpose: Corsair iCUE updates and usage data
+  suffixes: [corsair.com]
+- company: Gigabyte
+  category: update
+  purpose: Gigabyte Control Center updates
+  suffixes: [gigabyte.com, aorus.com]
+- company: AMD
+  category: update
+  purpose: AMD driver updates and usage data
+  suffixes: [amd.com, radeon.com]
+- company: Intel
+  category: telemetry
+  purpose: Intel Computing Improvement Program
+  suffixes: [intel.com, intel.net]
+- company: Riot Games
+  category: gaming
+  purpose: Riot client and games
+  suffixes: [riotgames.com, riotcdn.net, leagueoflegends.com, playvalorant.com, pvp.net]
+- company: Epic Games
+  category: gaming
+  purpose: Epic Games launcher and games
+  suffixes: [epicgames.com, epicgames.dev, unrealengine.com, fortnite.com]
+- company: MathWorks
+  category: licensing
+  purpose: MATLAB licensing and updates
+  suffixes: [mathworks.com]
+- company: Apple
+  category: cloud
+  purpose: Apple services
+  suffixes: [apple.com, icloud.com, mzstatic.com, apple-dns.net, aaplimg.com, cdn-apple.com]
+- company: Meta
+  category: advertising
+  purpose: Meta (Facebook, Instagram) and its tracking pixel
+  suffixes: [facebook.com, fbcdn.net, facebook.net, instagram.com, cdninstagram.com, whatsapp.com, whatsapp.net,
+             fbsbx.com, meta.com]
+- company: Amazon
+  category: advertising
+  purpose: Amazon advertising
+  suffixes: [amazon-adsystem.com, adtago.s3.amazonaws.com, device-metrics-us.amazon.com]
+- company: Amazon
+  category: cloud
+  purpose: Amazon Web Services hosting (the service behind it is not known)
+  suffixes: [amazonaws.com, cloudfront.net, amazon.com, awsstatic.com, aws.dev, amazonvideo.com, media-amazon.com]
+- company: Cloudflare
+  category: cdn
+  purpose: Cloudflare network (the service behind it is not known)
+  suffixes: [cloudflare.com, cloudflare.net, cloudflare-dns.com, cloudflareinsights.com, workers.dev, pages.dev,
+             cloudflarestorage.com]
+- company: Akamai
+  category: cdn
+  purpose: Akamai content delivery (the service behind it is not known)
+  suffixes: [akamai.net, akamaiedge.net, akamaihd.net, akamaized.net, akamaitechnologies.com, edgekey.net,
+             edgesuite.net, akadns.net, akamai.com]
+- company: Fastly
+  category: cdn
+  purpose: Fastly content delivery (the service behind it is not known)
+  suffixes: [fastly.net, fastlylb.net, fastly.com]
+- company: Sentry
+  category: telemetry
+  purpose: Crash and error reporting used by many apps
+  suffixes: [sentry.io, ingest.sentry.io, sentry-cdn.com]
+- company: Datadog
+  category: telemetry
+  purpose: App monitoring and usage analytics
+  suffixes: [datadoghq.com, browser-intake-datadoghq.com, datadoghq.eu]
+- company: Segment
+  category: telemetry
+  purpose: Usage analytics collector used by many apps
+  suffixes: [segment.io, segment.com, cdn.segment.com]
+- company: Amplitude
+  category: telemetry
+  purpose: Product usage analytics
+  suffixes: [amplitude.com, api.amplitude.com, api2.amplitude.com]
+- company: Mixpanel
+  category: telemetry
+  purpose: Product usage analytics
+  suffixes: [mixpanel.com, mxpnl.com]
+- company: Bugsnag
+  category: telemetry
+  purpose: Crash reporting
+  suffixes: [bugsnag.com]
+- company: New Relic
+  category: telemetry
+  purpose: App monitoring
+  suffixes: [newrelic.com, nr-data.net]
+- company: LaunchDarkly
+  category: telemetry
+  purpose: Remote feature flags and experiment assignment
+  suffixes: [launchdarkly.com]
+- company: Statsig
+  category: telemetry
+  purpose: Experiments and usage analytics
+  suffixes: [statsig.com, statsigapi.net, featuregates.org]
+- company: Intercom
+  category: telemetry
+  purpose: In-app messaging and user tracking
+  suffixes: [intercom.io, intercomcdn.com]
+- company: Comcast
+  category: connectivity
+  purpose: Internet provider services and DNS
+  suffixes: [comcast.net, xfinity.com, comcast.com]
+- company: Let's Encrypt and certificate authorities
+  category: security
+  purpose: Certificate revocation checks
+  suffixes: [digicert.com, lencr.org, letsencrypt.org, sectigo.com, usertrust.com, globalsign.com, ssl.com,
+             pki.goog, amazontrust.com, identrust.com, godaddy.com, entrust.net]
+- company: Public time servers
+  category: connectivity
+  purpose: Clock synchronisation
+  suffixes: [time.windows.com, pool.ntp.org, time.nist.gov, time.google.com, time.apple.com]
