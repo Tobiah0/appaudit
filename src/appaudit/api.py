@@ -372,6 +372,140 @@ def get_listeners() -> dict:
     return cached(("listeners",), 60, build)
 
 
+# --- what is inside: request content, built-in components, examples -----------------------------
+
+def _actor(actor_id: str) -> dict:
+    """An actor from the widest window that has it, so a row opened in any window resolves."""
+    for hours in (24, 168):
+        data = get_live(hours)
+        for actor in data["actors"]:
+            if actor["id"] == actor_id:
+                return actor
+    raise HTTPException(404, "unknown app")
+
+
+@app.post("/api/content")
+async def post_content(request: Request) -> dict:
+    """Switch capture of request headers and bodies on or off. Off by default."""
+    body = await request.json()
+    return _helper({"cmd": "content", "on": bool(body.get("on"))})
+
+
+@app.post("/api/content/clear")
+def post_content_clear() -> dict:
+    return _helper({"cmd": "content_clear"})
+
+
+@app.get("/api/examples")
+def get_examples(actor: str = "", host: str = "", example: str = "", addresses: str = "") -> dict:
+    from . import examples
+
+    if example:
+        return {"host": host, "captured": [], "documented": examples.documented(example_id=example)}
+    return examples.for_destination(actor, host, [item for item in addresses.split(",") if item])
+
+
+def _sdk_report(actor: dict) -> dict:
+    from . import sdks
+
+    return sdks.report(actor.get("exes") or [], [item["name"] for item in actor["destinations"] if item.get("name")])
+
+
+@app.get("/api/sdks")
+def get_sdks(actor: str) -> dict:
+    return _sdk_report(_actor(actor))
+
+
+@app.post("/api/sdks/scan")
+async def post_sdk_scan(request: Request) -> dict:
+    """Read the app's own files to look for known reporting components. Reads only."""
+    from . import sdks
+
+    found = _actor(str((await request.json()).get("actor", "")))
+    roots = sdks.roots_for(found.get("exes") or [])
+    if not roots:
+        raise HTTPException(400, "This app has no folder of its own to read (it is part of Windows or sits in a shared folder).")
+    sdks.start(roots)
+    return _sdk_report(found)
+
+
+# --- asking a company what it holds --------------------------------------------------------------
+# Nothing here sends anything. It drafts a letter and keeps a record of what the person did.
+
+def _letter(body: dict) -> tuple[dict, list[str]]:
+    from . import datarequests
+
+    company = str(body.get("company", "")).strip()
+    if not company:
+        raise HTTPException(400, "no company named")
+    evidence = datarequests.evidence_from(get_live(168)["actors"], company)
+    letter = datarequests.draft(company, evidence, datarequests.profile(), body.get("law"))
+    return letter, [item["app"] for item in evidence]
+
+
+@app.get("/api/requests")
+def get_requests() -> dict:
+    from . import datarequests
+
+    return {"profile": datarequests.profile(), "requests": datarequests.listing(),
+            "laws": {key: {"title": law["title"], "days": law["days"]} for key, law in datarequests.LAWS.items()}}
+
+
+@app.get("/api/requests/contact")
+def get_request_contact(company: str = "", publisher: str = "") -> dict:
+    from . import datarequests
+
+    name = company or datarequests.company_for(publisher) or ""
+    found = datarequests.contact(name) if name else {"known": False, "company": None, "role": "unknown"}
+    # Companies that hold data on an app maker's behalf; the page uses this to word the letter note.
+    return {**found, "processors": sorted(entry["company"] for entry in datarequests.directory().values()
+                                          if entry.get("role") == "processor")}
+
+
+@app.post("/api/requests/profile")
+async def post_request_profile(request: Request) -> dict:
+    from . import datarequests
+
+    return {"profile": datarequests.save_profile(await request.json())}
+
+
+@app.post("/api/requests/draft")
+async def post_request_draft(request: Request) -> dict:
+    letter, apps = _letter(await request.json())
+    return {**letter, "apps": apps}
+
+
+@app.post("/api/requests")
+async def post_request(request: Request) -> dict:
+    from . import datarequests
+
+    letter, apps = _letter(await request.json())
+    return {"id": datarequests.save(letter, apps), "requests": datarequests.listing()}
+
+
+@app.post("/api/requests/{request_id}")
+async def post_request_update(request_id: int, request: Request) -> dict:
+    from . import datarequests
+
+    try:
+        datarequests.update(request_id, str((await request.json()).get("action")))
+    except KeyError as error:
+        raise HTTPException(404, "unknown request") from error
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    return {"requests": datarequests.listing()}
+
+
+@app.get("/api/requests/{request_id}/reminder")
+def get_request_reminder(request_id: int) -> dict:
+    from . import datarequests
+
+    item = next((entry for entry in datarequests.listing() if entry["id"] == request_id), None)
+    if item is None or not item["sent"]:
+        raise HTTPException(404, "no sent request with that number")
+    return datarequests.reminder(item, datarequests.profile())
+
+
 def mount_static() -> None:
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
 

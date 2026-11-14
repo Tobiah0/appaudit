@@ -24,6 +24,13 @@ one-time download of public reference lists, and it appears in its own results.
 | Proof | Each switch against the evidence: "off and quiet", "off but still active", and before/after once you change one here |
 | Windows telemetry | Windows' own upload counters, its collection services, and the rule files it downloads from Microsoft |
 | Who is listening | Every event-trace subscription running on the PC and what it can see |
+| Data requests | Drafts a letter asking a company what it holds about you, quoting what this PC observed, and tracks when the answer is due. Nothing is sent by the tool |
+
+Opening an app on the Activity page also shows:
+
+- **Built into this app**: reporting components (Sentry, Datadog, Segment and about 30 others) found by reading the app's own files. This shows what the app is built to do, not what it sent.
+- **What a message looks like**: select a destination to see a real captured request, when "Request content" is switched on, or an illustration built from the vendor's published format. The two are labelled differently.
+- **Request content** (off by default, button at the top): records headers and the start of the body for requests made through Windows' own web library. Cookies, tokens and passwords are replaced before saving.
 
 ## Run it
 

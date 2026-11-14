@@ -14,9 +14,11 @@
     </div>
     <div class="scan-box">
       <span id="watch-state" class="muted"></span>
+      <button id="content-toggle" type="button" class="small" hidden>Request content: off</button>
       <button id="watch-toggle" type="button" hidden>Start watching</button>
     </div>
   </header>
+  <div id="content-panel" class="notice" hidden></div>
 
   <nav class="pages" aria-label="Sections">
     <button type="button" data-page="summary" class="active">Summary</button>
@@ -29,6 +31,7 @@
     <button type="button" data-page="proof">Proof</button>
     <button type="button" data-page="windows">Windows telemetry</button>
     <button type="button" data-page="listeners">Who is listening</button>
+    <button type="button" data-page="requests">Data requests</button>
   </nav>
 
   <div class="page" id="page-summary"></div>
@@ -112,9 +115,11 @@
   <div class="page" id="page-proof" hidden></div>
   <div class="page" id="page-windows" hidden></div>
   <div class="page" id="page-listeners" hidden></div>
+  <div class="page" id="page-requests" hidden></div>
 
   <script src="app.js"></script>
   <script src="live.js"></script>
+  <script src="inside.js"></script>
   <script src="switches.js"></script>
   <script src="extra.js"></script>
 </body>

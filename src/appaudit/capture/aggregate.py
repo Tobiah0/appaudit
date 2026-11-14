@@ -13,7 +13,11 @@ from urllib.parse import urlsplit
 
 from .. import livestore
 from ..etw import Event
-from . import decode, packets
+from . import decode, packets, redact
+
+MAX_BODY = 6000          # bytes of one request body kept in memory before it is made safe and shortened
+KEEP_PER_HOST = 5        # captured examples kept per program and host
+KEEP_DAYS = 7
 
 
 def is_local_only(address: str) -> bool:
@@ -134,7 +138,11 @@ class Aggregator:
         self._lookups: dict[tuple, list] = {}
         self._requests: dict[tuple, list] = {}
         self._tasks: dict[int, tuple[str, float]] = {}
-        self.counts = {"events": 0, "net": 0, "dns": 0, "http": 0, "proc": 0, "packets": 0, "names_from_packets": 0}
+        # Request content is only gathered while the person at the PC has switched it on.
+        self.content = False
+        self._pending: dict[tuple[int, int], dict] = {}
+        self.counts = {"events": 0, "net": 0, "dns": 0, "http": 0, "proc": 0, "packets": 0, "names_from_packets": 0,
+                       "content": 0}
 
     # -- tracing thread ---------------------------------------------------------------
 
@@ -150,7 +158,10 @@ class Aggregator:
             elif provider == decode.P_PROCESS:
                 self._process(event, when)
             elif provider == decode.P_WEBIO:
-                self._http(decode.webio(event), when)
+                if event.event_id == 17:
+                    self._http(decode.webio(event), when)
+                elif self.content:
+                    self._content(decode.webio_content(event), when)
             elif provider == decode.P_WININET:
                 self._http(decode.wininet(event), when)
             elif provider == decode.P_PKTMON:
@@ -239,6 +250,28 @@ class Aggregator:
         else:
             item[2] = when
             item[3] += 1
+        if self.content and request.request:
+            if len(self._pending) > 2000:                 # never grow without bound
+                self._pending.clear()
+            self._pending[(request.pid, request.request)] = {
+                "row": row, "method": request.method, "url": strip_query(request.url), "when": when,
+                "request_headers": b"", "response_headers": b"", "body": b"", "body_size": 0}
+
+    def _content(self, content: decode.HttpContent | None, when: float) -> None:
+        if content is None:
+            return
+        entry = self._pending.get((content.pid, content.request))
+        if entry is None:                                  # the request began before capture was switched on
+            return
+        self.counts["content"] += 1
+        if content.kind == "request_body":
+            entry["body_size"] += len(content.data)
+            if len(entry["body"]) < MAX_BODY:
+                entry["body"] += content.data[:MAX_BODY - len(entry["body"])]
+        elif not entry[content.kind]:
+            entry[content.kind] = content.data[:MAX_BODY]
+        if content.kind == "response_headers":
+            entry["done"] = True
 
     def _packet(self, event: Event, when: float) -> None:
         frame = decode.packet(event)
@@ -264,6 +297,10 @@ class Aggregator:
             requests, self._requests = self._requests, {}
             dirty, self.procs.dirty = self.procs.dirty, []
             ended, self.procs.ended = self.procs.ended, []
+            now = time.time()
+            finished = [key for key, entry in self._pending.items()
+                        if entry.get("done") or now - entry["when"] > 15 or not self.content]
+            payloads = [self._pending.pop(key) for key in finished]
         for row in dirty:
             if detail is not None:
                 detail(row)
@@ -303,5 +340,29 @@ class Aggregator:
             "ON CONFLICT DO UPDATE SET last = excluded.last, count = count + excluded.count",
             [(item[0]["id"], key[1], key[2], item[1], item[2], item[3]) for key, item in requests.items()
              if item[0]["id"] is not None])
+        self._write_payloads(conn, payloads)
         conn.commit()
         return {"flows": len(flows), "names": len(names), "procs": len(dirty)}
+
+    @staticmethod
+    def _write_payloads(conn, payloads: list[dict]) -> None:
+        touched = set()
+        for entry in payloads:
+            proc_id = entry["row"]["id"]
+            if proc_id is None or not (entry["request_headers"] or entry["body"]):
+                continue
+            sent = redact.headers(entry["request_headers"])
+            host = urlsplit(entry["url"]).hostname or redact.header_value(sent, "host") or "unknown"
+            body = redact.body(entry["body"], redact.header_value(sent, "content-encoding").lower())
+            conn.execute(
+                "INSERT INTO payloads (proc_id, host, method, url, at, request_headers, response_headers, body, "
+                "body_size) VALUES (?,?,?,?,?,?,?,?,?)",
+                (proc_id, host.lower(), entry["method"], entry["url"], entry["when"], sent,
+                 redact.headers(entry["response_headers"])[:1200], body, entry["body_size"]))
+            touched.add((proc_id, host.lower()))
+        for proc_id, host in touched:                      # a few recent examples per program and host, no more
+            conn.execute(
+                "DELETE FROM payloads WHERE proc_id = ? AND host = ? AND id NOT IN (SELECT id FROM payloads "
+                "WHERE proc_id = ? AND host = ? ORDER BY at DESC LIMIT ?)", (proc_id, host, proc_id, host, KEEP_PER_HOST))
+        if touched:
+            conn.execute("DELETE FROM payloads WHERE at < ?", (time.time() - KEEP_DAYS * 86400,))

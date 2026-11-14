@@ -53,6 +53,7 @@ document.querySelectorAll(".pages button").forEach((b) => b.addEventListener("cl
 async function refreshWatcher() {
   let helper = null;
   try { helper = (await (await fetch("/api/state")).json()).helper; } catch (error) { /* server gone */ }
+  if (typeof updateContentToggle === "function") updateContentToggle(helper);
   const label = $("#watch-state");
   const button = $("#watch-toggle");
   button.hidden = false;
@@ -132,15 +133,22 @@ function purposeCell(actor) {
 }
 
 function actorDetail(actor) {
-  const rows = actor.destinations.map((d) => el("tr", {},
-    el("td", {}, el("div", { class: "mono", text: d.name || d.address }),
-      el("div", { class: "sub", text: [d.name ? d.addresses.join(", ") : null, d.ports.join(", ")].filter(Boolean).join(" · ") })),
-    el("td", { text: d.company || d.owner || "Unknown" }),
-    el("td", {}, d.category ? categoryChip(d.category) : el("span", { class: "none", text: "Not identified" }),
-      d.tracker ? el("div", { class: "sub", text: d.tracker }) : null),
-    el("td", {}, el("div", { text: d.purpose || "" }), d.breaks ? el("div", { class: "sub", text: `If blocked: ${d.breaks}` }) : null),
-    el("td", { class: "num", text: bytes(d.sent) }), el("td", { class: "num", text: bytes(d.received) }),
-    el("td", { text: since(d.last) })));
+  const rows = [];
+  for (const d of actor.destinations) {
+    const key = `${actor.id}|${d.name || d.address}`;
+    const row = el("tr", { class: live.openDest === key ? "dest open" : "dest", title: "Show what a message to this destination looks like" },
+      el("td", {}, el("div", { class: "mono", text: d.name || d.address }),
+        el("div", { class: "sub", text: [d.name ? d.addresses.join(", ") : null, d.ports.join(", ")].filter(Boolean).join(" · ") })),
+      el("td", { text: d.company || d.owner || "Unknown" }),
+      el("td", {}, d.category ? categoryChip(d.category) : el("span", { class: "none", text: "Not identified" }),
+        d.tracker ? el("div", { class: "sub", text: d.tracker }) : null),
+      el("td", {}, el("div", { text: d.purpose || "" }), d.breaks ? el("div", { class: "sub", text: `If blocked: ${d.breaks}` }) : null),
+      el("td", { class: "num", text: bytes(d.sent) }), el("td", { class: "num", text: bytes(d.received) }),
+      el("td", { text: since(d.last) }));
+    row.addEventListener("click", (event) => { event.stopPropagation(); live.openDest = live.openDest === key ? null : key; renderLive(); });
+    rows.push(row);
+    if (live.openDest === key) rows.push(exampleRow(actor, d));
+  }
   const facts = [];
   if (actor.about) facts.push(el("li", {}, el("strong", { text: "What it is: " }), actor.about,
     actor.needed ? el("span", { class: "sub", text: ` Needed by Windows: ${actor.needed}.` }) : null));
@@ -177,6 +185,8 @@ function actorDetail(actor) {
     el("ul", { class: "facts" }, facts),
     blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
       el("div", { class: "sub", text: "Adds an outgoing block rule for the program in Windows Firewall. You can remove it here or in Windows." }), blockRows) : null,
+    sdkSection(actor), askSection(actor),
+    el("p", { class: "sub", text: "Select a destination to see what a message to it looks like." }),
     el("div", { class: "scroll" }, el("table", { class: "inner" },
       el("thead", {}, el("tr", {}, ["Destination", "Company", "Kind", "What it is for", "Sent", "Received", "Last"].map((t) => el("th", { text: t })))),
       el("tbody", {}, rows))),
@@ -221,9 +231,11 @@ function renderLive() {
 
 function renderCompanies() {
   const companies = (live.data && live.data.companies) || [];
+  const askable = (name) => !["Unknown", "Your local network", "Public time servers"].includes(name);
   const rows = companies.map((company) => el("tr", {},
     el("td", {}, el("div", { class: "name", text: company.company }),
-      el("div", { class: "sub", text: plural(company.destinations, "destination") })),
+      el("div", { class: "sub", text: plural(company.destinations, "destination") }),
+      askable(company.company) ? draftButton(company.company, "Ask what they hold") : null),
     el("td", { class: "num", text: bytes(company.sent) }), el("td", { class: "num", text: bytes(company.received) }),
     el("td", {}, Object.entries(company.categories).sort((a, b) => b[1] - a[1]).slice(0, 4)
       .map(([category, volume]) => categoryChip(category, bytes(volume)))),

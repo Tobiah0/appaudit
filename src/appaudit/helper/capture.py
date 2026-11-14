@@ -25,6 +25,10 @@ PROVIDERS = [
     etw.Provider(etw.WININET, keywords=0x1),
     etw.Provider(etw.TASK_SCHEDULER),
 ]
+WEBIO_URLS = PROVIDERS[3]
+# With content capture on: the same URLs plus the events Windows marks as personal data
+# (headers 100 and 101, body pieces 111). Body pieces are logged at the verbose level.
+WEBIO_CONTENT = etw.Provider(etw.WEBIO, keywords=0x4000000000 | 0x20000000000, level=5)
 PACKET_PROVIDER = etw.Provider(etw.PKTMON, keywords=0x10, level=5)
 PACKET_FILTER = "AppAuditDns"
 
@@ -100,6 +104,23 @@ class Capture:
         self.packets_on = False
         self.packet_note = "off"
 
+    # -- request content (off unless the person at the PC switches it on) ---------------
+
+    def set_content(self, on: bool) -> bool:
+        """Ask Windows for request headers and bodies as well as URLs, or stop asking."""
+        self.session.enable(WEBIO_CONTENT if on else WEBIO_URLS)
+        self.aggregator.content = bool(on)
+        livestore.set_meta(self.conn, content_capture=int(bool(on)))
+        self.conn.commit()
+        return bool(on)
+
+    def clear_content(self) -> int:
+        with self.aggregator._lock:
+            self.aggregator._pending.clear()
+        removed = self.conn.execute("DELETE FROM payloads").rowcount
+        self.conn.commit()
+        return removed
+
     # -- lifecycle --------------------------------------------------------------------
 
     def seed_names_from_cache(self) -> int:
@@ -125,6 +146,8 @@ class Capture:
 
     def start(self) -> None:
         self.session.start()
+        if livestore.get_meta(self.conn).get("content_capture") == "1":     # the choice survives a restart
+            self.set_content(True)
         if self.want_packets:
             self.start_packets()
         try:
@@ -179,7 +202,8 @@ class Capture:
 
     def status(self) -> dict:
         return {"running": self.session.alive(), "since": self.started, "events": self.session.events,
-                "lost": self.session.lost(), "packets": self.packet_note, "counts": dict(self.aggregator.counts)}
+                "lost": self.session.lost(), "packets": self.packet_note, "content": self.aggregator.content,
+                "counts": dict(self.aggregator.counts)}
 
     def stop(self) -> None:
         self._stop.set()

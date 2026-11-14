@@ -1,0 +1,168 @@
+# How to ask a company what it holds about you.
+#
+# Each link was checked on 2026-11-14 (it answered; pages behind a sign-in redirect to the sign-in
+# page, which counts). A company not listed here still gets a drafted letter, with a note that the
+# dashboard has no contact for it.
+#
+# role:
+#   controller  You are their customer. They decide what is collected and must answer you.
+#   processor   They store data on behalf of an app maker. They will usually refer you to the app
+#               maker, so the request goes to the maker of the app that sent the data.
+#   carrier     They move or host traffic (content delivery, cloud hosting, your internet provider).
+#               They rarely hold anything that identifies you beyond connection logs.
+# export:  a page where you can download your data yourself, without writing to anyone
+# request: a page or form for privacy requests
+# policy:  the privacy policy, which names the contact address for requests
+# how:     where to click, when the export sits inside the app or the account settings
+
+- company: Microsoft
+  role: controller
+  export: https://account.microsoft.com/privacy
+  request: https://www.microsoft.com/en-us/concern/privacy
+  how: The privacy dashboard lets you view and download activity data tied to your Microsoft account. Diagnostic data that is tied only to the device is requested through the privacy support form.
+
+- company: Google
+  role: controller
+  export: https://takeout.google.com/
+  how: Google Takeout exports the data in your Google account, product by product.
+
+- company: Spotify
+  role: controller
+  export: https://www.spotify.com/account/privacy/
+  how: Under "Download your data" you can ask for account data, extended streaming history and technical log information. Technical logs are the closest match to what this dashboard observes; they take up to 30 days.
+
+- company: Valve
+  role: controller
+  export: https://help.steampowered.com/en/accountdata
+  how: Steam shows the data related to your account page by page.
+
+- company: Apple
+  role: controller
+  export: https://privacy.apple.com/
+  how: Sign in and choose "Request a copy of your data".
+
+- company: Anthropic
+  role: controller
+  request: https://privacy.claude.com/
+  how: In the Claude app, Settings > Privacy has "Export data". Other requests go through the privacy centre.
+
+- company: Discord
+  role: controller
+  request: https://support.discord.com/hc/en-us/articles/360004027692-Requesting-a-Copy-of-your-Data
+  how: In Discord, User Settings > Data & Privacy > "Request all of my data". The package arrives by email, usually within 30 days.
+
+- company: Dropbox
+  role: controller
+  policy: https://www.dropbox.com/privacy
+  how: The privacy policy names the address for data requests. Your files themselves can be downloaded from the website.
+
+- company: Notion
+  role: controller
+  export: https://www.notion.com/help/export-your-content
+  how: Workspace content can be exported from Settings. Usage and log data needs a written request to Notion.
+
+- company: Amazon
+  role: controller
+  export: https://www.amazon.com/hz/privacy-central/data-requests/preview.html
+  how: The "Request your data" page lets you choose categories or everything.
+
+- company: Meta
+  role: controller
+  export: https://accountscenter.facebook.com/info_and_permissions
+  how: Accounts Centre > Your information and permissions > "Download your information".
+
+- company: GitHub
+  role: controller
+  request: https://docs.github.com/en/get-started/archiving-your-github-personal-account-and-public-repositories/requesting-an-archive-of-your-personal-accounts-data
+  how: Settings > Account > "Export account data".
+
+- company: Mozilla
+  role: controller
+  policy: https://www.mozilla.org/en-US/privacy/
+  how: Firefox telemetry is tied to a client identifier shown at about:telemetry. Quote it in the request.
+
+- company: Zoom
+  role: controller
+  policy: https://www.zoom.com/en/trust/privacy/
+
+- company: Slack
+  role: controller
+  policy: https://slack.com/trust/privacy/privacy-policy
+  how: For a workplace Slack, the workspace owner is the one who must answer, not Slack.
+
+- company: NVIDIA
+  role: controller
+  request: https://www.nvidia.com/en-us/about-nvidia/privacy-center/
+
+- company: Riot Games
+  role: controller
+  policy: https://www.riotgames.com/en/privacy-notice
+
+- company: Docker
+  role: controller
+  policy: https://www.docker.com/legal/privacy/
+
+- company: Python Software Foundation
+  role: controller
+  policy: https://policies.python.org/python.org/Privacy-Notice/
+
+# These three pages refuse automated checks, so the links are marked as not verified.
+- company: Adobe
+  role: controller
+  policy: https://www.adobe.com/privacy/policy.html
+  unchecked: true
+  how: Desktop app usage data can be switched off under Account > Privacy and personal data on Adobe's website.
+
+- company: OpenAI
+  role: controller
+  request: https://privacy.openai.com/
+  unchecked: true
+
+- company: Epic Games
+  role: controller
+  policy: https://www.epicgames.com/site/en-US/privacypolicy
+  unchecked: true
+
+- company: Datadog
+  role: processor
+  policy: https://www.datadoghq.com/legal/privacy/
+
+- company: Sentry
+  role: processor
+  policy: https://sentry.io/privacy/
+
+- company: New Relic
+  role: processor
+  policy: https://newrelic.com/termsandconditions/privacy
+
+- company: Amplitude
+  role: processor
+- company: Mixpanel
+  role: processor
+- company: Segment
+  role: processor
+- company: Bugsnag
+  role: processor
+- company: LaunchDarkly
+  role: processor
+- company: Statsig
+  role: processor
+- company: Intercom
+  role: processor
+- company: Splunk
+  role: processor
+
+- company: Cloudflare
+  role: carrier
+  policy: https://www.cloudflare.com/privacypolicy/
+- company: Fastly
+  role: carrier
+  policy: https://www.fastly.com/privacy
+- company: Akamai
+  role: carrier
+- company: Comcast
+  role: carrier
+- company: Let's Encrypt and certificate authorities
+  role: carrier
+- company: Public time servers
+  role: carrier

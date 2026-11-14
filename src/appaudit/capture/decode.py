@@ -169,6 +169,7 @@ class HttpRequest(NamedTuple):
     pid: int
     method: str
     url: str
+    request: int = 0     # WinHTTP's request pointer; later header and body events carry the same one
 
 
 def webio(event: Event) -> HttpRequest | None:
@@ -176,11 +177,40 @@ def webio(event: Event) -> HttpRequest | None:
     if event.event_id != 17:
         return None
     try:
+        request = struct.unpack_from("<Q", event.data, 0)[0]
         method, offset = _ansi(event.data, 32)
         url, _ = _wide(event.data, offset)
     except (struct.error, IndexError):
         return None
-    return HttpRequest(event.pid, method, url) if url else None
+    return HttpRequest(event.pid, method, url, request) if url else None
+
+
+class HttpContent(NamedTuple):
+    pid: int
+    request: int
+    kind: str            # request_headers | response_headers | request_body
+    data: bytes
+
+
+def webio_content(event: Event) -> HttpContent | None:
+    """Events 100 and 101 (headers sent and received) and 111 (a piece of the request body).
+
+    Windows marks these as carrying personal data. The helper only asks for them when the person
+    at the PC has switched content capture on.
+    """
+    data = event.data
+    try:
+        request = struct.unpack_from("<Q", data, 0)[0]
+        if event.event_id in (100, 101):
+            length = struct.unpack_from("<H", data, 8)[0]
+            kind = "request_headers" if event.event_id == 100 else "response_headers"
+            return HttpContent(event.pid, request, kind, data[10:10 + length])
+        if event.event_id == 111:
+            length = struct.unpack_from("<I", data, 36)[0]
+            return HttpContent(event.pid, request, "request_body", data[40:40 + length])
+    except struct.error:
+        return None
+    return None
 
 
 def wininet(event: Event) -> HttpRequest | None:

@@ -68,6 +68,19 @@ CREATE TABLE IF NOT EXISTS requests (
     count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (proc_id, method, url)
 ) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS payloads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    proc_id INTEGER NOT NULL,
+    host TEXT NOT NULL,
+    method TEXT,
+    url TEXT,
+    at REAL NOT NULL,
+    request_headers TEXT,
+    response_headers TEXT,
+    body TEXT,
+    body_size INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS payloads_host ON payloads (host, proc_id);
 CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT

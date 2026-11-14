@@ -1,0 +1,263 @@
+# What one message to a reporting service looks like.
+#
+# Every sample here is an ILLUSTRATION built from the format the service publishes. The field
+# names follow the linked documentation; the values are made up. Nothing here was captured from
+# anyone's PC. When content capture is switched on, the dashboard shows real captured requests
+# next to these and labels the two differently.
+#
+# suffixes: host names this example applies to (longest matching suffix wins)
+
+- id: microsoft-event
+  title: One Windows diagnostic event
+  company: Microsoft
+  suffixes: [events.data.microsoft.com, vortex.data.microsoft.com, vortex-win.data.microsoft.com,
+             telemetry.microsoft.com, aria.microsoft.com, events.data.msn.com]
+  source: Required diagnostic events and fields for Windows 11 (Microsoft Learn)
+  url: https://learn.microsoft.com/en-us/windows/privacy/required-diagnostic-events-fields-windows-11-24h2
+  note: Windows keeps the real events it sent. The "Windows telemetry" page reads them when the Diagnostic Data Viewer store is switched on.
+  sample: |
+    {
+      "ver": "4.0",
+      "name": "Microsoft.Windows.Update.Orchestrator.ScanTriggered",
+      "time": "2026-11-14T08:12:43.1178450Z",
+      "iKey": "o:0a89d516ae714e01ae89c96d185e9ae3",
+      "ext": {
+        "device": { "localId": "s:479C0DBF-EF4C-4F27-8EFB-0AB6F161CE7B", "deviceClass": "Windows.Desktop" },
+        "os":     { "name": "Windows", "ver": "10.0.26200.7171.amd64fre.ge_release" },
+        "app":    { "id": "W:0000f519feec486de87ed73cb92d3cac802400000000!MoUsoCoreWorker.exe" },
+        "protocol": { "devMake": "Example Maker", "devModel": "Example Model" },
+        "loc":    { "tz": "-05:00" }
+      },
+      "data": { "interactive": 0, "updateScenarioType": "Update", "wuDeviceid": "0f7c1e0a-..." }
+    }
+  fields:
+    - [name, "Which event this is. Microsoft publishes the list of required events and their fields."]
+    - [ext.device.localId, "An identifier for this PC. It is the same in every event, which is what lets events be joined into a history."]
+    - [ext.os / ext.protocol, "Windows version and the make and model of the PC."]
+    - [ext.app.id, "The program that produced the event."]
+    - [data, "The event's own details. For required events these are settings, versions and success or failure codes."]
+
+- id: datadog-log
+  title: One log line sent to Datadog
+  company: Datadog
+  suffixes: [datadoghq.com, datadoghq.eu, ddog-gov.com]
+  source: Datadog API reference, Send logs
+  url: https://docs.datadoghq.com/api/latest/logs/
+  note: Datadog only stores what the app chooses to log. The message text is written by the app's developers, so it can be anything from "window opened" to a full error with file paths.
+  sample: |
+    [
+      {
+        "ddsource": "electron",
+        "service": "desktop-app",
+        "status": "error",
+        "date": 1794643963000,
+        "message": "Failed to load workspace: request timed out after 30000 ms",
+        "ddtags": "env:production,version:5.1.2",
+        "session_id": "6f1c1f0e-4a0b-4b53-9f0c-2d3d5f3b9a11",
+        "usr": { "id": "user_01HZX..." },
+        "error": { "kind": "TimeoutError", "stack": "TimeoutError: ...\n    at loadWorkspace (app.js:4411:17)" }
+      }
+    ]
+  fields:
+    - [message, "Free text written by the app. This is the part nobody outside the company can predict."]
+    - [session_id / usr.id, "Ties the log line to one session and, if the app sets it, to your account."]
+    - [ddtags, "App version and environment."]
+    - [error.stack, "Where in the app's code the error happened. It can include file paths from your PC."]
+
+- id: sentry-event
+  title: One error report sent to Sentry
+  company: Sentry
+  suffixes: [sentry.io]
+  source: Sentry developer documentation, Event payloads
+  url: https://develop.sentry.dev/sdk/foundations/envelopes/event-payloads/
+  note: Breadcrumbs are the steps before the error. They are where page addresses, button names and console messages can end up.
+  sample: |
+    {
+      "event_id": "fc6d8c0c43fc4630ad850ee518f1b9d0",
+      "timestamp": "2026-11-14T08:12:43.000Z",
+      "platform": "javascript",
+      "release": "desktop-app@5.1.2",
+      "environment": "production",
+      "user": { "id": "user_01HZX...", "ip_address": "{{auto}}" },
+      "contexts": {
+        "os":     { "name": "Windows", "version": "10.0.26200" },
+        "device": { "arch": "x64", "memory_size": 34359738368, "screen_resolution": "2560x1440" },
+        "app":    { "app_start_time": "2026-11-14T07:58:02.000Z" }
+      },
+      "exception": { "values": [ { "type": "TypeError", "value": "Cannot read properties of undefined (reading 'id')",
+        "stacktrace": { "frames": [ { "filename": "app:///main.js", "function": "openDocument", "lineno": 2210 } ] } } ] },
+      "breadcrumbs": { "values": [
+        { "category": "ui.click", "message": "button.sidebar-new-page", "timestamp": 1794643958 },
+        { "category": "navigation", "data": { "from": "/home", "to": "/doc/…" }, "timestamp": 1794643960 } ] }
+    }
+  fields:
+    - [user, "An account identifier if the app sets one. \"{{auto}}\" asks Sentry to record your IP address."]
+    - [contexts, "Operating system, memory, screen size."]
+    - [exception, "What failed and where in the code."]
+    - [breadcrumbs, "The last things you did before the error: clicks, page changes, network calls."]
+
+- id: segment-track
+  title: One usage event sent to Segment
+  company: Segment
+  suffixes: [segment.io, segment.com]
+  source: Segment Spec, Track
+  url: https://segment.com/docs/connections/spec/track/
+  note: Segment is a relay. The app maker decides which other companies each event is forwarded to.
+  sample: |
+    {
+      "type": "track",
+      "event": "Document Exported",
+      "anonymousId": "23adfd82-aa0f-45a7-a756-24f2a7a4c895",
+      "userId": "user_01HZX...",
+      "properties": { "format": "pdf", "pages": 12, "source": "toolbar" },
+      "context": {
+        "app": { "name": "Desktop App", "version": "5.1.2" },
+        "os":  { "name": "Windows", "version": "10.0.26200" },
+        "locale": "en-US", "timezone": "America/New_York", "ip": "203.0.113.24"
+      },
+      "timestamp": "2026-11-14T08:12:43.000Z",
+      "messageId": "ajs-f8ca1e4de5024d9430b3928bd8ac6b96"
+    }
+  fields:
+    - [event / properties, "What you did, named by the app maker, with details."]
+    - [anonymousId / userId, "A device identifier and, once signed in, your account identifier."]
+    - [context, "App version, operating system, language, time zone and IP address."]
+
+- id: amplitude-event
+  title: One usage event sent to Amplitude
+  company: Amplitude
+  suffixes: [amplitude.com]
+  source: Amplitude HTTP V2 API
+  url: https://amplitude.com/docs/apis/analytics/http-v2
+  sample: |
+    {
+      "api_key": "[the app's key]",
+      "events": [
+        {
+          "user_id": "user_01HZX...",
+          "device_id": "C8F9E604-F01A-4BD9-95C6-8E5357DF265D",
+          "event_type": "search_performed",
+          "time": 1794643963000,
+          "session_id": 1794643102000,
+          "event_properties": { "query_length": 14, "results": 6 },
+          "user_properties": { "plan": "free" },
+          "app_version": "5.1.2", "platform": "Windows", "os_name": "Windows", "os_version": "10",
+          "language": "English", "country": "United States", "ip": "$remote"
+        }
+      ]
+    }
+  fields:
+    - [event_type / event_properties, "What you did and details about it."]
+    - [user_id / device_id / session_id, "Who and which device, so events can be joined into a timeline."]
+    - [user_properties, "Facts the app maker keeps about your account, such as your plan."]
+
+- id: mixpanel-event
+  title: One usage event sent to Mixpanel
+  company: Mixpanel
+  suffixes: [mixpanel.com]
+  source: Mixpanel API reference, Track Events
+  url: https://docs.mixpanel.com/reference/track-event
+  sample: |
+    [
+      {
+        "event": "Page Viewed",
+        "properties": {
+          "token": "[the app's key]",
+          "distinct_id": "user_01HZX...",
+          "$device_id": "18c3a3f2c1e5b-0d4f6d6a7b8c9d",
+          "time": 1794643963,
+          "$insert_id": "5d958f87-542d-4c10-9422-0ed75893dc81",
+          "$os": "Windows", "$screen_height": 1440, "$screen_width": 2560,
+          "page": "settings/billing"
+        }
+      }
+    ]
+  fields:
+    - [event, "What you did."]
+    - [distinct_id / $device_id, "Your account and device identifiers."]
+    - [other properties, "Operating system, screen size and whatever the app maker adds."]
+
+- id: posthog-event
+  title: One usage event sent to PostHog
+  company: PostHog
+  suffixes: [posthog.com]
+  source: PostHog API, Capture
+  url: https://posthog.com/docs/api/capture
+  sample: |
+    {
+      "api_key": "[the app's key]",
+      "event": "feature_used",
+      "distinct_id": "user_01HZX...",
+      "properties": { "feature": "export", "$os": "Windows", "$app_version": "5.1.2", "$session_id": "0190c3..." },
+      "timestamp": "2026-11-14T08:12:43.000Z"
+    }
+  fields:
+    - [event / properties, "What you did and details."]
+    - [distinct_id, "Your account or device identifier."]
+
+- id: ga4-event
+  title: One usage event sent to Google Analytics
+  company: Google
+  suffixes: [google-analytics.com, app-measurement.com, analytics.google.com]
+  source: Google Analytics Measurement Protocol reference
+  url: https://developers.google.com/analytics/devguides/collection/protocol/ga4/reference
+  sample: |
+    {
+      "client_id": "1730219982.1794640021",
+      "user_id": "user_01HZX...",
+      "timestamp_micros": "1794643963000000",
+      "events": [
+        { "name": "screen_view", "params": { "screen_name": "Settings", "session_id": "1794643102", "engagement_time_msec": 5300 } }
+      ]
+    }
+  fields:
+    - [client_id / user_id, "An identifier for this install and, if set, for your account."]
+    - [events, "What you did, with details."]
+
+- id: appinsights-event
+  title: One event sent to Azure Application Insights
+  company: Microsoft
+  suffixes: [dc.services.visualstudio.com, applicationinsights.azure.com, dc.applicationinsights.azure.com]
+  source: Application Insights telemetry data model (Microsoft Learn)
+  url: https://learn.microsoft.com/en-us/azure/azure-monitor/app/data-model-complete
+  sample: |
+    {
+      "name": "Microsoft.ApplicationInsights.Event",
+      "time": "2026-11-14T08:12:43.000Z",
+      "iKey": "[the app's key]",
+      "tags": {
+        "ai.session.id": "Rk9vQmFy", "ai.user.id": "d3b0c1...", "ai.device.osVersion": "Windows 10.0.26200",
+        "ai.application.ver": "5.1.2", "ai.location.ip": "0.0.0.0"
+      },
+      "data": { "baseType": "EventData", "baseData": { "name": "extension/activated",
+        "properties": { "extensionId": "example.tool", "durationMs": "412" } } }
+    }
+  fields:
+    - [tags, "Session, user and device identifiers, operating system and app version."]
+    - [data.baseData, "The event name and its details, chosen by the app maker."]
+
+- id: bugsnag-event
+  title: One error report sent to Bugsnag
+  company: Bugsnag
+  suffixes: [bugsnag.com]
+  source: Bugsnag documentation, Reporting events and sessions
+  url: https://developer.smartbear.com/bugsnag/docs/reporting-events-and-sessions
+  sample: |
+    {
+      "apiKey": "[the app's key]",
+      "notifier": { "name": "Bugsnag JavaScript", "version": "8.x" },
+      "events": [
+        {
+          "exceptions": [ { "errorClass": "TypeError", "message": "x is undefined",
+            "stacktrace": [ { "file": "app.js", "lineNumber": 2210, "method": "openDocument" } ] } ],
+          "user": { "id": "user_01HZX..." },
+          "app": { "version": "5.1.2", "releaseStage": "production" },
+          "device": { "osName": "Windows", "osVersion": "10.0.26200", "locale": "en-US" },
+          "breadcrumbs": [ { "name": "UI click", "type": "user", "timestamp": "2026-11-14T08:12:38.000Z" } ]
+        }
+      ]
+    }
+  fields:
+    - [exceptions, "What failed and where in the code."]
+    - [user / device / app, "Your account identifier if set, the operating system and the app version."]
+    - [breadcrumbs, "The last things you did before the error."]

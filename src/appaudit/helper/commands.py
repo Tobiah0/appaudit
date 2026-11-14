@@ -14,6 +14,8 @@ class Commands:
             "status": self._status,
             "stop": self._stop,
             "packets": self._packets,
+            "content": lambda request: {"content": self.capture.set_content(bool(request.get("on")))},
+            "content_clear": lambda _request: {"removed": self.capture.clear_content()},
             "switch_apply": self._switch_apply,
             "switch_undo": self._switch_undo,
             "block_add": self._block_add,

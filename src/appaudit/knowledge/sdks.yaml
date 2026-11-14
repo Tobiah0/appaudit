@@ -1,0 +1,302 @@
+# Reporting components that app makers build into their software.
+#
+# Finding one in an app's files shows what the app is BUILT to do. It does not show that the
+# component is switched on or what it sent. "domains" lets the dashboard say whether the app was
+# also seen talking to that component's service.
+#
+# kind: analytics | crash | monitoring | advertising | flags | messaging | platform
+# strings: text searched for inside the app's files (plain and 16-bit text, any letter case)
+# files: file names that identify the component by themselves
+# example: an entry in examples.yaml
+
+- id: sentry
+  name: Sentry
+  company: Sentry
+  kind: crash
+  collects: Error and crash reports with the app version, operating system, device details and the steps that led to the error. It can also record performance timings and, if the app maker enables it, a replay of the session.
+  strings: ["ingest.sentry.io", "sentry.io/api/", "sentry_key=", "@sentry/electron", "@sentry/browser", "@sentry/node"]
+  files: ["sentry.dll", "sentry-native.dll", "sentry_crashpad.dll"]
+  domains: [sentry.io]
+  example: sentry-event
+
+- id: datadog
+  name: Datadog
+  company: Datadog
+  kind: monitoring
+  collects: App logs, errors and performance data. The browser version (Real User Monitoring) records page views, clicks and loading times under a session identifier.
+  strings: ["browser-intake-datadoghq", "http-intake.logs.datadoghq", "@datadog/browser-rum", "@datadog/browser-logs", "datadoghq.com/api/v2/logs", "datadoghq.com/api/v2/rum"]
+  domains: [datadoghq.com, datadoghq.eu, ddog-gov.com]
+  example: datadog-log
+
+- id: segment
+  name: Segment
+  company: Segment
+  kind: analytics
+  collects: A record of what you do in the app (screens opened, buttons pressed) tied to an anonymous or account identifier. Segment then forwards it to whichever other services the app maker has connected.
+  strings: ["api.segment.io", "cdn.segment.com", "@segment/analytics"]
+  domains: [segment.io, segment.com]
+  example: segment-track
+
+- id: amplitude
+  name: Amplitude
+  company: Amplitude
+  kind: analytics
+  collects: Product usage events (which features you use, in what order, for how long) tied to a device and user identifier.
+  strings: ["api.amplitude.com", "api2.amplitude.com", "api.eu.amplitude.com", "@amplitude/analytics"]
+  domains: [amplitude.com]
+  example: amplitude-event
+
+- id: mixpanel
+  name: Mixpanel
+  company: Mixpanel
+  kind: analytics
+  collects: Product usage events tied to a device or account identifier, with details such as operating system, screen size and city-level location.
+  strings: ["api.mixpanel.com", "api-js.mixpanel.com", "api-eu.mixpanel.com", "mixpanel-browser"]
+  domains: [mixpanel.com]
+  example: mixpanel-event
+
+- id: posthog
+  name: PostHog
+  company: PostHog
+  kind: analytics
+  collects: Product usage events and, if the app maker enables it, recordings of the session.
+  strings: ["app.posthog.com", "i.posthog.com", "posthog-js", "posthog-node"]
+  domains: [posthog.com]
+  example: posthog-event
+
+- id: google-analytics
+  name: Google Analytics and Firebase
+  company: Google
+  kind: analytics
+  collects: Usage events tied to an app-instance identifier. Google can combine them with its advertising products if the app maker links the two.
+  strings: ["google-analytics.com/mp/collect", "google-analytics.com/g/collect", "google-analytics.com/collect", "app-measurement.com", "firebaselogging-pa.googleapis.com"]
+  domains: [google-analytics.com, app-measurement.com, analytics.google.com]
+  example: ga4-event
+
+- id: crashlytics
+  name: Firebase Crashlytics
+  company: Google
+  kind: crash
+  collects: Crash reports with device model, operating system version and what the app was doing.
+  strings: ["crashlytics.com", "firebasecrashlyticsreports", "crashlyticsreports-pa.googleapis.com"]
+  domains: [crashlytics.com]
+
+- id: appcenter
+  name: Visual Studio App Center
+  company: Microsoft
+  kind: analytics
+  collects: Usage events and crash reports with an install identifier, app version, device model and country.
+  strings: ["in.appcenter.ms", "api.appcenter.ms", "Microsoft.AppCenter"]
+  domains: [appcenter.ms]
+
+- id: appinsights
+  name: Azure Application Insights
+  company: Microsoft
+  kind: monitoring
+  collects: Usage events, errors and performance data, tagged with a session, user and device identifier chosen by the app maker.
+  strings: ["dc.services.visualstudio.com", "applicationinsights.azure.com", "Microsoft.ApplicationInsights", "IngestionEndpoint="]
+  domains: [dc.services.visualstudio.com, applicationinsights.azure.com]
+  example: appinsights-event
+
+- id: onecollector
+  name: Microsoft 1DS (the telemetry library in Microsoft apps)
+  company: Microsoft
+  kind: analytics
+  collects: Usage and diagnostic events in Microsoft's common format, tagged with a device identifier and, when signed in, an account identifier. Used by Office, Edge, Teams, VS Code and many others.
+  strings: ["events.data.microsoft.com/OneCollector", "mobile.events.data.microsoft.com", "browser.events.data.microsoft.com", "pipe.aria.microsoft.com", "Microsoft.Applications.Telemetry", "Microsoft.Applications.Events", "self.events.data.microsoft.com"]
+  domains: [events.data.microsoft.com, aria.microsoft.com]
+  example: microsoft-event
+
+- id: mozilla-glean
+  name: Firefox telemetry (Glean)
+  company: Mozilla
+  kind: analytics
+  collects: Technical and interaction data about how Firefox is used and how it performs, tied to a client identifier. It can be switched off in Firefox settings.
+  strings: ["incoming.telemetry.mozilla.org"]
+  domains: [telemetry.mozilla.org]
+
+- id: bugsnag
+  name: Bugsnag
+  company: Bugsnag
+  kind: crash
+  collects: Error and crash reports with app version, device details and a user identifier if the app maker sets one.
+  strings: ["notify.bugsnag.com", "sessions.bugsnag.com", "@bugsnag/"]
+  domains: [bugsnag.com]
+  example: bugsnag-event
+
+- id: newrelic
+  name: New Relic
+  company: New Relic
+  kind: monitoring
+  collects: Performance timings, errors and page views, tied to a session.
+  strings: ["bam.nr-data.net", "bam-cell.nr-data.net", "js-agent.newrelic.com", "mobile-collector.newrelic.com"]
+  domains: [nr-data.net, newrelic.com]
+
+- id: splunk
+  name: Splunk
+  company: Splunk
+  kind: monitoring
+  collects: App logs sent to the app maker's Splunk account. What is in them depends entirely on the app.
+  strings: ["splunkcloud.com", "/services/collector/event", "http-inputs-"]
+  domains: [splunkcloud.com, splunk.com]
+
+- id: rollbar
+  name: Rollbar
+  company: Rollbar
+  kind: crash
+  collects: Error reports with app version, device details and the request that failed.
+  strings: ["api.rollbar.com"]
+  domains: [rollbar.com]
+
+- id: backtrace
+  name: Backtrace
+  company: Backtrace
+  kind: crash
+  collects: Crash dumps, which are a copy of part of the app's memory at the moment it failed.
+  strings: ["submit.backtrace.io", ".sp.backtrace.io"]
+  domains: [backtrace.io]
+
+- id: launchdarkly
+  name: LaunchDarkly
+  company: LaunchDarkly
+  kind: flags
+  collects: The app asks which features to switch on for you, sending a user or device key and whatever attributes the app maker attaches (plan, country, app version). It reports back which features were shown.
+  strings: ["clientstream.launchdarkly.com", "events.launchdarkly.com", "clientsdk.launchdarkly.com", "app.launchdarkly.com", "launchdarkly-js", "launchdarkly-node"]
+  domains: [launchdarkly.com]
+
+- id: statsig
+  name: Statsig
+  company: Statsig
+  kind: flags
+  collects: The app asks which features and experiments apply to you, sending a user or device identifier, and logs which variants you saw and what you did.
+  strings: ["api.statsig.com", "statsigapi.net", "featuregates.org", "featureassets.org", "statsig-js", "@statsig/"]
+  domains: [statsig.com, statsigapi.net, featuregates.org, featureassets.org]
+
+- id: optimizely
+  name: Optimizely
+  company: Optimizely
+  kind: flags
+  collects: Which experiment variants you were shown and whether you did what the experiment measures.
+  strings: ["logx.optimizely.com", "cdn.optimizely.com"]
+  domains: [optimizely.com]
+
+- id: intercom
+  name: Intercom
+  company: Intercom
+  kind: messaging
+  collects: The in-app help chat. It sends your account details and the pages or screens you visit so support staff can see them.
+  strings: ["api-iam.intercom.io", "widget.intercom.io", "intercomcdn.com"]
+  domains: [intercom.io, intercomcdn.com]
+
+- id: braze
+  name: Braze
+  company: Braze
+  kind: messaging
+  collects: Usage events used to decide which marketing messages and notifications to send you.
+  strings: ["sdk.iad-01.braze.com", ".braze.com/api/v3", "appboy"]
+  domains: [braze.com]
+
+- id: fullstory
+  name: FullStory
+  company: FullStory
+  kind: analytics
+  collects: A recording of your session in the app (what was on screen, where you clicked and scrolled).
+  strings: ["rs.fullstory.com", "edge.fullstory.com"]
+  domains: [fullstory.com]
+
+- id: hotjar
+  name: Hotjar
+  company: Hotjar
+  kind: analytics
+  collects: Recordings and heatmaps of where you click and scroll.
+  strings: ["static.hotjar.com", "script.hotjar.com"]
+  domains: [hotjar.com]
+
+- id: heap
+  name: Heap
+  company: Heap
+  kind: analytics
+  collects: Every click, form change and page view, captured automatically, tied to a user identifier.
+  strings: ["heapanalytics.com"]
+  domains: [heapanalytics.com]
+
+- id: pendo
+  name: Pendo
+  company: Pendo
+  kind: analytics
+  collects: Which features and pages you use, to drive in-app guides and usage reports.
+  strings: ["cdn.pendo.io", "data.pendo.io", "app.pendo.io"]
+  domains: [pendo.io]
+
+- id: rudderstack
+  name: RudderStack
+  company: RudderStack
+  kind: analytics
+  collects: Usage events that are then forwarded to other services chosen by the app maker.
+  strings: ["dataplane.rudderstack.com", "rudderlabs.com"]
+  domains: [rudderstack.com, rudderlabs.com]
+
+- id: adobe-analytics
+  name: Adobe Analytics and Audience Manager
+  company: Adobe
+  kind: advertising
+  collects: Usage events and identifiers that can be used to build marketing audiences across sites and apps.
+  strings: ["omtrdc.net", "demdex.net", "2o7.net"]
+  domains: [omtrdc.net, demdex.net, 2o7.net]
+
+- id: appsflyer
+  name: AppsFlyer
+  company: AppsFlyer
+  kind: advertising
+  collects: Which advertisement led to the install, plus in-app events, tied to a device identifier.
+  strings: ["appsflyersdk.com", "conversions.appsflyer.com", "inapps.appsflyer.com", "launches.appsflyer.com", "register.appsflyer.com"]
+  domains: [appsflyer.com, appsflyersdk.com]
+
+- id: adjust
+  name: Adjust
+  company: Adjust
+  kind: advertising
+  collects: Which advertisement led to the install, plus in-app events, tied to a device identifier.
+  strings: ["app.adjust.com", "app.adjust.net.in", "app.adjust.world"]
+  domains: [adjust.com]
+
+- id: branch
+  name: Branch
+  company: Branch
+  kind: advertising
+  collects: Which link or advertisement brought you to the app, tied to a device identifier.
+  strings: ["api2.branch.io", "api.branch.io"]
+  domains: [branch.io]
+
+- id: unity-analytics
+  name: Unity Analytics
+  company: Unity
+  kind: analytics
+  collects: Game sessions, device model, and in-game events, tied to a device identifier.
+  strings: ["cdp.cloud.unity3d.com", "config.uca.cloud.unity3d.com", "perf-events.cloud.unity3d.com", "analytics.cloud.unity3d.com"]
+  domains: [unity3d.com]
+
+- id: epic-online-services
+  name: Epic Online Services
+  company: Epic Games
+  kind: platform
+  collects: Sign-in, friends and play sessions for games that use Epic's services, including usage metrics sent to Epic.
+  strings: ["api.epicgames.dev"]
+  files: ["EOSSDK-Win64-Shipping.dll", "EOSSDK-Win32-Shipping.dll"]
+  domains: [epicgames.dev, epicgames.com]
+
+- id: steamworks
+  name: Steamworks
+  company: Valve
+  kind: platform
+  collects: Lets a game talk to Steam for sign-in, achievements and play time. Play sessions are reported to Valve through the Steam client.
+  files: ["steam_api64.dll", "steam_api.dll"]
+  domains: [steampowered.com, steamcommunity.com]
+
+- id: crashpad
+  name: Crashpad crash reporter
+  company: the app's own maker
+  kind: crash
+  collects: A crash dump (a copy of part of the app's memory when it failed). It is part of every app built on Chromium or Electron and only uploads if the app maker has given it an address to send to.
+  files: ["crashpad_handler.exe", "chrome_crashpad_handler.exe"]
+  domains: []

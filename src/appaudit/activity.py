@@ -49,6 +49,7 @@ def helper_state() -> dict:
         "ever_ran": bool(meta), "since": float(meta.get("started", 0) or 0), "heartbeat": heartbeat,
         "events": int(meta.get("events", 0) or 0), "lost": int(meta.get("lost", 0) or 0),
         "packets": meta.get("packets"), "last_error": meta.get("last_error"),
+        "content": meta.get("content_capture") == "1",
     }
 
 
