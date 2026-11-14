@@ -9,7 +9,7 @@ switches:
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableTelemetry, private: 1}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Mozilla\Firefox', value: DisableFirefoxStudies, private: 1}
-    expect: {domains: [telemetry.mozilla.org, normandy.cdn.mozilla.net, classify-client.services.mozilla.com]}
+    expect: {domains: [telemetry.mozilla.org, normandy.cdn.mozilla.net, classify-client.services.mozilla.com], senders: {processes: [firefox.exe, pingsender.exe]}}
   - id: firefox.default-browser-agent
     title: Firefox default browser agent
     explain: A scheduled task that reports to Mozilla once a day which browser is your default, even when Firefox is closed.
@@ -39,7 +39,7 @@ switches:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\Global\FTS', value: EnableRID44231, private: 0}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\Global\FTS', value: EnableRID64640, private: 0}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\NVIDIA Corporation\Global\FTS', value: EnableRID66610, private: 0}
-    expect: {domains: [events.gfe.nvidia.com, telemetry.gfe.nvidia.com]}
+    expect: {domains: [events.gfe.nvidia.com, telemetry.gfe.nvidia.com], senders: {processes: [nvcontainer.exe, NVDisplay.Container.exe, NvTelemetryContainer.exe, NVIDIA App.exe, NVIDIA Share.exe]}}
   - id: adobe.acrobat-usage
     title: Adobe Acrobat usage measurement
     explain: Acrobat reports which features you use to Adobe.
@@ -48,7 +48,7 @@ switches:
     detect: {path: ['%ProgramFiles%\Adobe\Acrobat DC\Acrobat\Acrobat.exe', '%ProgramFiles(x86)%\Adobe\Acrobat DC\Acrobat\Acrobat.exe']}
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown', value: bUsageMeasurement, private: 0}
-    expect: {domains: [cc-api-data.adobe.io, omtrdc.net, demdex.net, adobedtm.com]}
+    expect: {domains: [cc-api-data.adobe.io, omtrdc.net, demdex.net, adobedtm.com], senders: {processes: [Acrobat.exe, AcroCEF.exe, AdobeCollabSync.exe, acrotray.exe, LogTransport2.exe]}}
   - id: adobe.acrobat-cloud
     title: Adobe Acrobat cloud services and upsell
     explain: Acrobat contacts Adobe's cloud for storage, sign-in prompts and in-app offers.

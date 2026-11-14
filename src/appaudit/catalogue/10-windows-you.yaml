@@ -123,7 +123,7 @@ switches:
     checks:
       - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\Explorer', value: DisableSearchBoxSuggestions, private: 1}
       - {type: registry, hive: HKCU, key: 'Software\Microsoft\Windows\CurrentVersion\Search', value: BingSearchEnabled, private: 0, default: 1}
-    expect: {domains: [bing.com]}
+    expect: {domains: [bing.com], senders: {processes: [SearchHost.exe, SearchApp.exe, SearchUI.exe]}}
   - id: win.search-highlights
     title: Search highlights
     explain: The search box downloads daily promotional content from Microsoft.
@@ -180,4 +180,4 @@ switches:
     breaks: The lock screen stops rotating Microsoft's pictures; your own picture still works.
     checks:
       - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\CloudContent', value: DisableWindowsSpotlightFeatures, private: 1}
-    expect: {domains: [arc.msn.com, iris.microsoft.com]}
+    expect: {domains: [arc.msn.com, iris.microsoft.com], senders: {processes: [LockApp.exe, explorer.exe, backgroundTaskHost.exe]}}

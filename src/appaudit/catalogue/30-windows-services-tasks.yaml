@@ -13,7 +13,7 @@ switches:
     risk: medium
     checks:
       - {type: service, name: DiagTrack, private: disabled}
-    expect: {services: [DiagTrack], domains: [events.data.microsoft.com, vortex.data.microsoft.com, settings-win.data.microsoft.com]}
+    expect: {services: [DiagTrack]}
   - id: svc.dmwappush
     title: WAP push message routing service
     explain: Routes device-management push messages; it works together with the telemetry service.

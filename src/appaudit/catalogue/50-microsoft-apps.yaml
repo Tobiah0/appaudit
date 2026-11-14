@@ -8,7 +8,7 @@ switches:
     detect: {path: ['%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe', '%ProgramFiles%\Microsoft\Edge\Application\msedge.exe']}
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Edge', value: DiagnosticData, private: 0}
-    expect: {processes: [msedge.exe], process_domains: [events.data.msn.com, events.data.microsoft.com]}
+    expect: {domains: [events.data.msn.com, events.data.microsoft.com], senders: {processes: [msedge.exe]}}
   - id: edge.personalisation
     title: Edge personalisation from browsing history
     explain: Lets Microsoft use your browsing history to personalise ads, search and news.

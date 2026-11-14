@@ -71,6 +71,10 @@ def load_catalogue() -> dict[str, Switch]:
                 raise ValueError(f"duplicate switch id {switch.id} in {path.name}")
             for check in switch.checks:
                 _validate(check, switch.id)
+            if switch.expect:
+                from ..proof import validate_expect
+
+                validate_expect(switch.expect, switch.id)
             switches[switch.id] = switch
     return switches
 

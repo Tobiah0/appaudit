@@ -26,7 +26,7 @@ switches:
     breaks: Windows keeps using the rules it already has.
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\DataCollection', value: DisableOneSettingsDownloads, private: 1}
-    expect: {domains: [settings-win.data.microsoft.com]}
+    expect: {domains: [settings-win.data.microsoft.com], senders: {services: [DiagTrack]}}
   - id: win.feedback-notifications
     title: Feedback notifications (policy)
     explain: Stops Windows from asking for feedback, for every account on this PC.
@@ -118,7 +118,7 @@ switches:
     breaks: The Widgets board and its taskbar button disappear.
     checks:
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Dsh', value: AllowNewsAndInterests, private: 0}
-    expect: {domains: [msn.com, widgetservice.azurefd.net]}
+    expect: {domains: [msn.com, widgetservice.azurefd.net], senders: {processes: [Widgets.exe, WidgetService.exe, WidgetBoard.exe, msedgewebview2.exe]}}
   - id: win.online-tips
     title: Online tips in Settings
     explain: Settings downloads help text and promotional tips from Microsoft.

@@ -24,7 +24,7 @@ switches:
     checks:
       - {type: registry, hive: HKCU, key: 'Software\Policies\Microsoft\Windows\WindowsCopilot', value: TurnOffWindowsCopilot, private: 1}
       - {type: registry, hive: HKLM, key: 'SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot', value: TurnOffWindowsCopilot, private: 1}
-    expect: {domains: [copilot.microsoft.com, sydney.bing.com]}
+    expect: {domains: [copilot.microsoft.com, sydney.bing.com], senders: {processes: [Copilot.exe, msedgewebview2.exe]}}
   - id: ai.generative-app-access
     title: Apps can use Windows' on-device AI models
     explain: Lets apps run text and image generation through models that Windows provides.

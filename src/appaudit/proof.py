@@ -1,9 +1,19 @@
 """Proof: compare what a switch claims with what the PC actually did.
 
-Each catalogue switch may carry an `expect` block naming the services, processes, scheduled-task
-folders and domains that should go quiet when the switch is off. A *footprint* is how much of
-that was observed in a time window. Comparing the footprint before and after a switch was
-applied gives a verdict.
+Each catalogue switch may carry an `expect` block saying what should go quiet when it is off:
+
+  processes, services, tasks   programs the switch stops outright. Their runs and all their
+                               traffic count.
+  domains                      addresses the switch stops traffic to. Traffic to them counts only
+                               when one of the programs above, or one named under `senders`, sent
+                               it. Many collection addresses are shared: Defender and OneDrive use
+                               the same Microsoft endpoint as the telemetry service, and a browser
+                               reaches Bing or Adobe's analytics because of the pages you open.
+  senders                      {processes: [...], services: [...]}: programs whose traffic counts
+                               only when it goes to `domains`. Their runs do not count.
+
+A *footprint* is how much of that was observed in a time window. Comparing the footprint before
+and after a switch was applied gives a verdict.
 """
 
 from __future__ import annotations
@@ -15,6 +25,7 @@ from collections import defaultdict
 from . import livestore, switches
 
 MIN_HOURS = 1.0          # observation needed on each side before a before/after verdict is given
+NAME_VALID = 24 * 3600   # an address counts as a name for this long after the name was last resolved
 
 
 def _suffix_match(name: str, suffixes: list[str]) -> bool:
@@ -22,60 +33,87 @@ def _suffix_match(name: str, suffixes: list[str]) -> bool:
     return any(name == suffix or name.endswith("." + suffix) for suffix in suffixes)
 
 
+def _lower(items) -> list[str]:
+    return [item.lower() for item in items or []]
+
+
+def validate_expect(expect: dict, switch_id: str) -> None:
+    """Domains alone are not evidence: someone the switch controls must have sent the traffic."""
+    unknown = set(expect) - {"processes", "services", "tasks", "domains", "senders"}
+    if unknown:
+        raise ValueError(f"{switch_id}: unknown expect keys {sorted(unknown)}")
+    senders = expect.get("senders") or {}
+    if set(senders) - {"processes", "services"}:
+        raise ValueError(f"{switch_id}: senders takes only processes and services")
+    owners = expect.get("processes") or expect.get("services") or expect.get("tasks")
+    if expect.get("domains") and not (owners or senders.get("processes") or senders.get("services")):
+        raise ValueError(f"{switch_id}: domains need the programs that send to them (processes, services or senders)")
+    if senders and not expect.get("domains"):
+        raise ValueError(f"{switch_id}: senders only count traffic to domains, and none are listed")
+
+
+def _names(conn: sqlite3.Connection) -> dict[str, list[tuple[str, float, float]]]:
+    """Every name each address was resolved to, with when it was first and last resolved."""
+    found: dict[str, list[tuple[str, float, float]]] = defaultdict(list)
+    for row in conn.execute("SELECT address, name, first, last FROM names"):
+        found[row["address"]].append((row["name"], row["first"], row["last"]))
+    return found
+
+
+def _names_at(entries: list[tuple[str, float, float]], first: float, last: float) -> list[str]:
+    """Names an address had while a flow ran. Addresses are reused by CDNs and cloud hosts, so a
+    name resolved long before the flow is not taken as the flow's destination."""
+    return [name for name, seen_first, seen_last in entries
+            if seen_first <= last and seen_last >= first - NAME_VALID]
+
+
 def footprint(conn: sqlite3.Connection, expect: dict, since: float, until: float) -> dict:
     """Observed activity matching `expect` between two times."""
-    processes = {item.lower() for item in expect.get("processes", [])}
-    services = {item.lower() for item in expect.get("services", [])}
-    tasks = [item.lower() for item in expect.get("tasks", [])]
-    domains = [item.lower() for item in expect.get("domains", [])]
-    # Domains that only count when one of the named processes is the sender (a browser talks to
-    # many places; only its reporting endpoints are evidence for a reporting switch).
-    own_domains = [item.lower() for item in expect.get("process_domains", [])]
+    processes = set(_lower(expect.get("processes")))
+    services = set(_lower(expect.get("services")))
+    tasks = _lower(expect.get("tasks"))
+    domains = _lower(expect.get("domains"))
+    sender_spec = expect.get("senders") or {}
+    sender_processes = set(_lower(sender_spec.get("processes")))
+    sender_services = set(_lower(sender_spec.get("services")))
 
-    matched: dict[int, sqlite3.Row] = {}
+    owned: set[int] = set()          # the switch stops these outright: runs and all traffic count
+    senders_only: set[int] = set()   # only their traffic to `domains` counts
+    runs = defaultdict(int)
     for row in conn.execute("SELECT id, name, services, task, started, ended, seen_start FROM procs "
                             "WHERE started <= ? AND (ended IS NULL OR ended >= ?)", (until, since)):
         name = (row["name"] or "").lower()
         hosted = {item.lower() for item in (row["services"] or "").split(",") if item}
         task = (row["task"] or "").lower()
         if name in processes or hosted & services or (task and any(task.startswith(prefix) for prefix in tasks)):
-            matched[row["id"]] = row
+            owned.add(row["id"])
+            if row["seen_start"] and since <= row["started"] <= until:
+                runs[row["name"]] += 1
+        elif name in sender_processes or hosted & sender_services:
+            senders_only.add(row["id"])
 
-    runs = defaultdict(int)
-    for row in matched.values():
-        if row["seen_start"] and since <= row["started"] <= until:
-            runs[row["name"]] += 1
-
-    names: dict[str, list[str]] = defaultdict(list)
-    own_names: dict[str, list[str]] = defaultdict(list)
-    if domains or own_domains:
-        for row in conn.execute("SELECT address, name FROM names"):
-            if domains and _suffix_match(row["name"], domains):
-                names[row["address"]].append(row["name"])
-            if own_domains and _suffix_match(row["name"], own_domains):
-                own_names[row["address"]].append(row["name"])
+    names = _names(conn) if (owned or senders_only) else {}
 
     sent = received = contacts = 0
     destinations: dict[str, int] = defaultdict(int)
     senders: dict[str, int] = defaultdict(int)
     buckets = set()
-    proc_names = {}
-    for row in conn.execute("SELECT f.proc_id, f.remote, f.sent, f.received, f.events, f.bucket, p.name FROM flows f "
-                            "JOIN procs p ON p.id = f.proc_id WHERE f.last >= ? AND f.first <= ?", (since, until)):
+    for row in conn.execute("SELECT f.proc_id, f.remote, f.sent, f.received, f.events, f.bucket, f.first, f.last, "
+                            "p.name FROM flows f JOIN procs p ON p.id = f.proc_id "
+                            "WHERE f.last >= ? AND f.first <= ?", (since, until)):
         buckets.add(row["bucket"])
-        by_process = row["proc_id"] in matched
-        if own_domains:
-            by_process = by_process and row["remote"] in own_names
-        by_domain = row["remote"] in names
-        if not (by_process or by_domain):
+        if row["proc_id"] not in owned and row["proc_id"] not in senders_only:
+            continue
+        current = _names_at(names.get(row["remote"], []), row["first"], row["last"])
+        expected = [name for name in current if _suffix_match(name, domains)]
+        if row["proc_id"] in senders_only and not expected:
             continue
         sent += row["sent"]
         received += row["received"]
         contacts += row["events"]
-        label = (names.get(row["remote"]) or own_names.get(row["remote"]) or [row["remote"]])[0]
+        label = (expected or current or [row["remote"]])[0]
         destinations[label] += row["sent"] + row["received"]
         senders[row["name"]] += row["sent"]
-        proc_names[row["proc_id"]] = row["name"]
     return {
         "runs": sum(runs.values()), "run_names": dict(runs), "sent": sent, "received": received,
         "contacts": contacts, "hours_observed": len(buckets),

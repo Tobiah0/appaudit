@@ -12,7 +12,8 @@ HOUR = 3600
 
 def make_db(tmp_path, runs_before, runs_after, changed, bytes_per_run=5000, other_traffic_after=True):
     conn = livestore.connect(file=tmp_path / "live.db")
-    conn.execute("INSERT INTO names VALUES ('203.0.113.50', 'collect.example.com', 'dns', 0, 0)")
+    conn.execute("INSERT INTO names VALUES ('203.0.113.50', 'collect.example.com', 'dns', ?, ?)",
+                 (changed - 30 * HOUR, time.time()))
     proc_id = 0
 
     def run(name, when, remote, sent):
@@ -70,14 +71,63 @@ def test_nothing_seen(tmp_path):
     assert verdict(tmp_path, 0, 0)[2]["verdict"] == "nothing_seen"
 
 
-def test_domain_match_counts_other_processes(tmp_path):
+def add_flow(conn, proc_id, name, remote, sent, when, services=None):
+    conn.execute("INSERT INTO procs (id, pid, started, exe, name, services, seen_start) VALUES (?,?,?,?,?,?,1)",
+                 (proc_id, proc_id, when, f"C:\\x\\{name}", name, services))
+    conn.execute("INSERT INTO flows VALUES (?,?,443,'tcp',?,?,0,1,?,?)",
+                 (proc_id, remote, int(when // HOUR) * HOUR, sent, when, when))
+
+
+def test_shared_endpoint_does_not_count_other_programs(tmp_path):
+    """Defender and OneDrive use the same Microsoft collection address as the telemetry service.
+    Their traffic is not evidence that the telemetry service is still active."""
     conn = make_db(tmp_path, 0, 0, time.time() - 6 * HOUR)
-    conn.execute("INSERT INTO procs (id, pid, started, exe, name, seen_start) VALUES (900, 9, ?, 'C:\\a.exe', 'a.exe', 1)",
-                 (time.time() - 2 * HOUR,))
-    conn.execute("INSERT INTO flows VALUES (900, '203.0.113.50', 443, 'tcp', ?, 777, 0, 1, ?, ?)",
-                 (int((time.time() - 2 * HOUR) // HOUR) * HOUR, time.time() - 2 * HOUR, time.time() - 2 * HOUR))
+    when = time.time() - 2 * HOUR
+    add_flow(conn, 900, "MpDefenderCoreService.exe", "203.0.113.50", 777, when)
+    expect = {"services": ["DiagTrack"]}
+    mark = proof.footprint(conn, expect, time.time() - 5 * HOUR, time.time())
+    assert mark["sent"] == 0 and not mark["active"]
     mark = proof.footprint(conn, EXPECT, time.time() - 5 * HOUR, time.time())
-    assert mark["sent"] == 777 and mark["senders"][0][0] == "a.exe"
+    assert "MpDefenderCoreService.exe" not in dict(mark["senders"])
+
+
+def test_senders_count_only_traffic_to_listed_domains(tmp_path):
+    conn = make_db(tmp_path, 0, 0, time.time() - 6 * HOUR)
+    when = time.time() - 2 * HOUR
+    add_flow(conn, 900, "msedge.exe", "203.0.113.50", 500, when)        # to collect.example.com
+    add_flow(conn, 901, "msedge.exe", "198.51.100.7", 9000, when)       # an ordinary web page
+    add_flow(conn, 902, "chrome.exe", "203.0.113.50", 300, when)        # not a named sender
+    expect = {"domains": ["collect.example.com"], "senders": {"processes": ["msedge.exe"]}}
+    mark = proof.footprint(conn, expect, time.time() - 5 * HOUR, time.time())
+    assert mark["sent"] == 500
+    assert mark["runs"] == 0                                            # a sender starting is not evidence
+    assert mark["destinations"][0][0] == "collect.example.com"
+
+
+def test_stale_name_is_not_the_destination(tmp_path):
+    """A CDN address that resolved to a collection host days ago may serve anything today."""
+    conn = make_db(tmp_path, 0, 0, time.time() - 6 * HOUR)
+    long_ago = time.time() - 5 * 24 * HOUR
+    conn.execute("INSERT INTO names VALUES ('192.0.2.9', 'collect.example.com', 'dns', ?, ?)", (long_ago, long_ago))
+    add_flow(conn, 900, "msedge.exe", "192.0.2.9", 400, time.time() - 2 * HOUR)
+    expect = {"domains": ["collect.example.com"], "senders": {"processes": ["msedge.exe"]}}
+    assert proof.footprint(conn, expect, time.time() - 5 * HOUR, time.time())["sent"] == 0
+
+
+def test_expect_without_senders_is_refused():
+    import pytest
+
+    with pytest.raises(ValueError, match="domains need"):
+        proof.validate_expect({"domains": ["bing.com"]}, "x")
+    with pytest.raises(ValueError, match="unknown expect keys"):
+        proof.validate_expect({"processes": ["a.exe"], "process_domains": ["b.com"]}, "x")
+    proof.validate_expect({"domains": ["bing.com"], "senders": {"processes": ["SearchHost.exe"]}}, "x")
+
+
+def test_catalogue_expect_blocks_are_valid():
+    switches.load_catalogue.cache_clear()
+    catalogue = switches.load_catalogue()
+    assert sum(1 for item in catalogue.values() if item.expect) >= 20
 
 
 def test_now_verdicts():
