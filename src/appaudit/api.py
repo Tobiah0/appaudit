@@ -176,7 +176,12 @@ def get_switches() -> dict:
         counts: dict[str, int] = {}
         for entry in states:
             counts[entry["state"]] = counts.get(entry["state"], 0) + 1
-        return {"switches": states, "counts": counts, "journal": switches.journal_entries()[:50]}
+        from . import drift
+
+        drift.record(states)
+        titles = {entry["id"]: entry["title"] for entry in states}
+        changes = [{**item, "title": titles.get(item["id"], item["id"])} for item in drift.log(limit=40)]
+        return {"switches": states, "counts": counts, "journal": switches.journal_entries()[:50], "drift": changes}
 
     return cached(("switches",), 4, build)
 
@@ -230,6 +235,30 @@ def get_digest(hours: float = 12) -> dict:
     from . import digest
 
     return cached(("digest", hours), 20, lambda: digest.build(min(max(hours, 1), 24 * 30)))
+
+
+@app.get("/api/history")
+def get_history(days: int = 60) -> dict:
+    from . import history
+
+    def build() -> dict:
+        data = history.summary(min(max(days, 1), 120))
+        who = activity.attributor()
+        for app in data["apps"]:
+            ref = who.app_for_exe(app["exe"]) if app["exe"] else None
+            app["name"] = ref.name if ref else app["app"]
+            app["publisher"] = ref.publisher if ref else None
+            app["is_system"] = ref.is_system if ref else app["exe"] is None
+        return data
+
+    return cached(("history", days), 120, build)
+
+
+@app.post("/api/history/refresh")
+def post_history_refresh() -> dict:
+    result = _helper({"cmd": "history_refresh"})
+    _cache.pop(("history", 60), None)
+    return result
 
 
 # --- per-app network blocks -------------------------------------------------------------------

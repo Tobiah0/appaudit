@@ -191,3 +191,41 @@ async function loadSummary() {
   page.replaceChildren(...blocks);
 }
 pageLoaders.summary = loadSummary;
+
+// --- 60-day history ---------------------------------------------------------------------------
+
+async function loadHistory() {
+  const page = $("#page-history");
+  const data = await (await fetch("/api/history")).json();
+  const refresh = el("button", { type: "button", text: "Read the latest from Windows" });
+  refresh.addEventListener("click", async () => {
+    refresh.disabled = true;
+    refresh.textContent = "Reading…";
+    const response = await post("/api/history/refresh");
+    if (!response.ok) refresh.textContent = (await response.json()).detail;
+    else loadHistory();
+  });
+  const blocks = [el("p", { class: "lead", text: "Windows keeps its own record of how much each program sent and received, "
+    + "going back about 60 days, and for roughly the last week how long each was in front of you. This is from before the watcher ran." }),
+    el("section", { class: "toolbar" }, refresh,
+      el("span", { class: "muted", text: data.available ? `Covers ${data.first_day} to ${data.last_day}` : "Not read yet. This needs the watcher running." }))];
+  if (data.available) {
+    const apps = data.apps.filter((app) => app.exe);
+    const silent = apps.filter((app) => app.focus === 0 && !app.is_system);
+    blocks.push(el("section", { class: "tiles" },
+      el("div", { class: "tile" }, el("strong", { text: apps.length }), el("span", { text: "programs used the network" })),
+      el("div", { class: "tile hot" }, el("strong", { text: silent.length }), el("span", { text: "of them were never in front of you in the recorded week" })),
+      el("div", { class: "tile" }, el("strong", { text: bytes(apps.reduce((sum, app) => sum + app.sent, 0)) }), el("span", { text: "sent in total" }))));
+    const rows = apps.slice(0, 250).map((app) => el("tr", {},
+      el("td", {}, el("div", { class: "name", text: app.name }), el("div", { class: "sub mono", text: app.exe })),
+      el("td", { class: "num", text: bytes(app.sent) }), el("td", { class: "num", text: bytes(app.received) }),
+      el("td", { class: "num", text: `${app.net_days} days` }),
+      el("td", {}, app.focus ? `${(app.focus / 3600).toFixed(1)} h on ${app.focus_days} days`
+        : el("span", { class: app.is_system ? "none" : "chip flag", text: "Never in focus" }))));
+    blocks.push(el("main", {}, el("table", {}, el("thead", {}, el("tr", {},
+      ["Program", "Sent", "Received", "Active on", "In front of you (about a week)"].map((t) => el("th", { text: t })))),
+      el("tbody", {}, rows))));
+  }
+  page.replaceChildren(...blocks);
+}
+pageLoaders.history = loadHistory;

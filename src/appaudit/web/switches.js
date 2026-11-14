@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 // The Switches page: every known privacy switch, its current state, and apply / undo.
 
@@ -107,7 +107,17 @@ function renderSwitches() {
   const message = $("#sw-message");
   message.hidden = !sw.message;
   message.textContent = sw.message || "";
-  if (sw.show === "journal") { $("#sw-list").replaceChildren(...journalView(sw.data.journal)); return; }
+  if (sw.show === "journal") {
+    const reverted = (sw.data.drift || []).filter((item) => item.turned_back_on);
+    const other = (sw.data.drift || []).filter((item) => !item.turned_back_on);
+    const driftCard = (sw.data.drift || []).length ? el("div", { class: "card" }, el("h2", { text: "Changed outside this tool" }),
+      [...reverted, ...other].map((item) => el("div", { class: "row" },
+        el("div", { class: "grow" }, el("div", { class: "name", text: item.title }),
+          el("div", { class: "sub", text: `Noticed ${new Date(item.noticed * 1000).toLocaleString()}: was ${item.before}, now ${item.after}` })),
+        item.turned_back_on ? el("span", { class: "state exposed", text: "Turned back on" }) : el("span", { class: "state na", text: "Changed" })))) : null;
+    $("#sw-list").replaceChildren(...[driftCard, ...journalView(sw.data.journal)].filter(Boolean));
+    return;
+  }
   const needle = sw.search.trim().toLowerCase();
   const groups = new Map();
   for (const item of sw.data.switches) {

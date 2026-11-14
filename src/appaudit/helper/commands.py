@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .. import history
 from . import inspect
 
 
@@ -17,6 +18,7 @@ class Commands:
             "switch_undo": self._switch_undo,
             "block_add": self._block_add,
             "block_remove": self._block_remove,
+            "history_refresh": lambda _request: history.refresh(),
             "trace_sessions": lambda _request: inspect.trace_sessions(),
             "windows_telemetry": lambda _request: inspect.windows_telemetry(),
             "transcript": lambda request: inspect.transcript(min(int(request.get("limit", 200)), 1000)),
