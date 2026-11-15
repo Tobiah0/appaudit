@@ -212,6 +212,7 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
             if item["via_websites"] and who_ and who_ not in trackers:
                 trackers.append(who_)
         actor["website_trackers"] = trackers[:8]
+        actor["proc_ids"] = sorted(actor["runs"])
         actor.update(destinations=destinations[:60], destination_count=len(destinations),
                      processes=sorted(actor["processes"]), exes=sorted(actor["exes"])[:8], runs=len(actor["runs"]), tasks=sorted(actor["tasks"]),
                      categories=dict(actor["categories"]), browser=browser["name"] if browser else None,

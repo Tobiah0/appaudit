@@ -87,6 +87,11 @@ function evidenceView(item) {
     for (const [name, size] of w.destinations || []) rows.push(el("li", { class: "sub mono", text: `${name}: ${bytes(size)}` }));
   }
   for (const app of evidence.apps || []) rows.push(el("li", { text: app }));
+  if (evidence.presence && (evidence.presence.present || evidence.presence.away)) {
+    const p = evidence.presence;
+    rows.push(el("li", { text: `Sent while you were at the PC: ${bytes(p.present)}; while nobody was: ${bytes(p.away)}`
+      + (p.unknown ? `; at times App Audit was not running: ${bytes(p.unknown)}` : "") }));
+  }
   if (evidence.starts_itself) rows.push(el("li", { text: "It is set to start by itself." }));
   return rows.length ? fold(`case|${item.id}|evidence`, "Evidence", el("ul", { class: "facts" }, rows)) : null;
 }

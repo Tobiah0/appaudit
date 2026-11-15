@@ -30,6 +30,9 @@ async def lifespan(_app: FastAPI):
     if store.latest_scan() is None:
         scan.start_scan_in_background()
     threading.Thread(target=activity.attributor, daemon=True).start()   # warm the slow lookups
+    from . import presence
+
+    presence.start()                                   # one bit per minute: someone at the keyboard or not
     yield
 
 

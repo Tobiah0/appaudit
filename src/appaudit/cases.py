@@ -160,8 +160,10 @@ def build(hours: float = 24, now: float | None = None) -> list[dict]:
             company = destination["company"] or destination["owner"] or destination["name"]
             if same_company(actor.get("publisher"), company):
                 continue
-            entry = third.setdefault(company, {"company": company, "sent": 0, "hosts": [], "purpose": destination["purpose"]})
+            entry = third.setdefault(company, {"company": company, "sent": 0, "hosts": [], "purpose": destination["purpose"],
+                                               "addresses": set()})
             entry["sent"] += destination["sent"]
+            entry["addresses"] |= set(destination.get("addresses") or [])
             if destination["name"] and destination["name"] not in entry["hosts"]:
                 entry["hosts"].append(destination["name"])
         third = {key: value for key, value in third.items() if value["sent"] >= MIN_THIRD_PARTY}
@@ -171,12 +173,15 @@ def build(hours: float = 24, now: float | None = None) -> list[dict]:
         companies = sorted(third.values(), key=lambda item: -item["sent"])
         names = ", ".join(item["company"] for item in companies[:3])
         purposes = sorted({(item["purpose"] or "").lower() for item in companies if item["purpose"]})
+        note, away = _presence_note(actor, now - hours * 3600, now, set().union(*(item["addresses"] for item in companies)))
+        for item in companies:
+            item["addresses"] = sorted(item["addresses"])
         found.append({
             "id": f"third-party:{actor['id']}", "kind": "third_party", "severity": "high" if total >= 1024 * 1024 else "medium",
             "app": actor["name"], "actor": actor["id"],
             "title": f"{actor['name']} sent {_bytes(total)} to {names}"
-                     + (f" ({purposes[0]})" if len(purposes) == 1 else "") + f", not to {actor.get('publisher') or 'its maker'}.",
-            "evidence": {"companies": companies},
+                     + (f" ({purposes[0]})" if len(purposes) == 1 else "") + f", not to {actor.get('publisher') or 'its maker'}." + note,
+            "evidence": {"companies": companies, "presence": away},
             "actions": [{"type": "open_app", "actor": actor["id"]}],
             "fingerprint": _fingerprint(sorted(third), _size_band(total)),
         })
@@ -193,12 +198,14 @@ def build(hours: float = 24, now: float | None = None) -> list[dict]:
             small.append(item)
             continue
         last = "you have never opened it" if item["never_recorded"] else f"you last opened it {item['days_unused']} days ago"
+        note, away = _presence_note(actor, now - hours * 3600, now) if actor else ("", None)
         found.append({
             "id": f"unused:{actor.get('id', item['name'])}", "kind": "unused_active", "severity": "medium" if item["starts_itself"] else "low",
             "app": item["name"], "actor": actor.get("id"),
             "title": f"{item['name']} " + ("starts by itself and " if item["starts_itself"] else "")
-                     + f"used the network ({_bytes(item['sent'] + item['received'])}), though {last}.",
-            "evidence": {"companies": item["companies"], "starts_itself": item["starts_itself"], "days_unused": item["days_unused"]},
+                     + f"used the network ({_bytes(item['sent'] + item['received'])}), though {last}." + note,
+            "evidence": {"companies": item["companies"], "starts_itself": item["starts_itself"], "days_unused": item["days_unused"],
+                         "presence": away},
             "actions": [{"type": "open_app", "actor": actor.get("id")}] if actor else [],
             "fingerprint": _fingerprint(item["starts_itself"], sorted(item["companies"])),
         })
@@ -252,6 +259,37 @@ def _new_companies(hours: float, now: float, snapshot: dict) -> list[dict]:
             "fingerprint": _fingerprint(new),
         })
     return cases
+
+
+def _presence_note(actor: dict, since: float, now: float, addresses: set[str] | None = None) -> tuple[str, dict | None]:
+    """" 80% of it went out while nobody was at the keyboard.", when presence covers enough of it."""
+    from . import livestore, presence
+
+    ids = actor.get("proc_ids") or []
+    if not ids:
+        return "", None
+    known = presence.minutes(since, now)
+    if not known:
+        return "", None
+    try:
+        conn = livestore.connect(readonly=True)
+    except (FileNotFoundError, sqlite3.Error):
+        return "", None
+    try:
+        rows = []
+        for start in range(0, len(ids), 500):
+            chunk = ids[start:start + 500]
+            marks = ",".join("?" * len(chunk))
+            rows += conn.execute(f"SELECT remote, sent, first, last FROM flows WHERE proc_id IN ({marks}) AND last >= ?",
+                                 (*chunk, since)).fetchall()
+    finally:
+        conn.close()
+    rows = [row for row in rows if addresses is None or row[0] in addresses]
+    summary = presence.summarise([{"sent": row[1], "first": row[2], "last": row[3]} for row in rows], known)
+    if summary["away_share"] is None or summary["coverage"] < 0.5:
+        return "", summary
+    share = round(summary["away_share"] * 100)
+    return f" {share}% of it went out while nobody was at the keyboard.", summary
 
 
 # --- decisions --------------------------------------------------------------------------------

@@ -63,7 +63,7 @@ then depth.
 - [x] 2.3 Cases home page: open cases ranked, accepted and fixed behind a filter; each case links
       to the app view sections and its actions. Target: about 10 open cases on this PC, each
       readable in one sentence.
-- [ ] 2.4 Presence: per-minute "at the keyboard" from the input-time data Windows already keeps
+- [x] 2.4 Presence: per-minute "at the keyboard" from the input-time data Windows already keeps
       (SRUM input seconds, and the watcher if feasible without new elevation); split traffic into
       "while you were there" and "while you were away".
 
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **2.4** (done): `presence.py`: the dashboard records one bit per minute (keyboard or mouse used in the last 2 minutes, via GetLastInputInfo, no elevation, nothing else stored, kept 30 days). Traffic is split into while present / while away / unknown (minutes without a record are unknown, never away). Third-party and unused-app cases add "N% of it went out while nobody was at the keyboard" once at least half the bytes fall in recorded minutes; evidence shows the split. Sampler verified recording (first minute: away, Tobiah is out). The sentence itself needs a few hours of samples; re-check in 6.3. SRUM's per-day input time is not used for minutes (too coarse). 158 tests.
 - **2.3** (done): Cases is the first page and the default. Open / Marked fine / Fixed tabs, 24 h or 7 days; each case shows its sentence, evidence (collapsed), switch previews inline, "Look at the app" (opens its Activity view), and "It's fine" / "Show it again". Verified in the browser on the real capture: 14 open cases; Firefox's switch preview opens in its case; marking Steam fine hid it and showing it again restored the count; Look at the app opens Claude's view. 154 tests.
 - **2.1 + 2.2** (done): `cases.py` builds cases with stable ids, severity, one-sentence statements of what was observed, evidence, actions (the app's switches) and states (open, accepted, testing; fixed when a says-vs-does case disappears). Accepted cases reopen when their fingerprint changes (new company, 4x more data). Dismissed apps count as accepted. Contrasts: says vs does, can be switched off, third party (destination company is not the app's maker), unused vs active (updaters excluded, small ones grouped), new company. On the real capture: 14 open cases (from 25 before grouping), e.g. "Claude sent 11.8 MB to Datadog, Intercom, not to Anthropic PBC." API `/api/cases`, `/api/cases/decide`. Build takes ~9 s, cached 60 s; to speed up later. 154 tests.
 - **1.5** (done): new proof rule `reporting_from`: a product's own programs sending to destinations the knowledge base calls reporting. 74 of 183 imported switches now have proof (the rest are steps-only or share a program with another product). Runs with their own profile (`--user-data-dir`) are not counted, because the user's settings do not govern them. Real result: Tobiah's VS Code telemetry switch shows **off and quiet**; without the profile rule Claude's blank-profile test would have made it look "off but still active". 144 tests.
