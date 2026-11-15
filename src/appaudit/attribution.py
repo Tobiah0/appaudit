@@ -145,6 +145,10 @@ class Attributor:
         self._cache: dict[tuple, dict] = {}
 
     def app_for_exe(self, exe: str | None, name: str | None = None) -> AppRef:
+        if not exe and (not name or name.startswith("pid ")):
+            # Ended before the watcher could read its name. One honest group instead of a row per id.
+            return AppRef(id="proc:unidentified", name="Programs that ended before they could be identified",
+                          kind="unknown", is_system=False)
         if not exe:
             label = name or "Unknown process"
             return AppRef(id="proc:" + label.lower(), name=label, kind="system", is_system=True)

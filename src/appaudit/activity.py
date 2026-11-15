@@ -76,6 +76,28 @@ def _url_hosts(conn: sqlite3.Connection, proc_ids: list[int]) -> dict[int, set[s
     return hosts
 
 
+def _fill_unnamed(conn: sqlite3.Connection, procs: dict[int, dict]) -> None:
+    """Give a process the watcher only knew by its id the program of another record with the same
+    id that overlaps it in time (the watcher sometimes learns the name a moment later)."""
+    unnamed = {proc["pid"]: [] for proc in procs.values() if not proc.get("exe") and (proc.get("name") or "").startswith("pid ")}
+    if not unnamed:
+        return
+    pids = list(unnamed)
+    for start in range(0, len(pids), 500):
+        chunk = pids[start:start + 500]
+        marks = ",".join("?" * len(chunk))
+        for row in conn.execute(f"SELECT * FROM procs WHERE pid IN ({marks}) AND exe IS NOT NULL", chunk):
+            unnamed[row["pid"]].append(dict(row))
+    for proc in procs.values():
+        if proc.get("exe") or not (proc.get("name") or "").startswith("pid "):
+            continue
+        for other in unnamed.get(proc["pid"], []):
+            ends = other.get("ended") or float("inf")
+            if other["started"] - 60 <= proc["started"] <= ends + 60:
+                proc.update({key: other[key] for key in ("exe", "name", "services", "task", "package", "cmdline", "parent_exe")})
+                break
+
+
 def snapshot(since: float | None = None, until: float | None = None) -> dict:
     """Everything the dashboard needs for one time window, grouped by actor and by company."""
     conn = _connect()
@@ -96,6 +118,7 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
             marks = ",".join("?" * len(chunk))
             for row in conn.execute(f"SELECT * FROM procs WHERE id IN ({marks})", chunk):
                 procs[row["id"]] = dict(row)
+        _fill_unnamed(conn, procs)
         names = _names_for(conn, {row["remote"] for row in flows})
         lookups: dict[int, list[str]] = defaultdict(list)
         for start in range(0, len(proc_ids), 500):
