@@ -1,0 +1,113 @@
+# 24-hour autonomous phase
+
+Started 2026-11-14, evening. Tobiah is away; Claude works through this list without instruction,
+one item per cycle, and logs each result at the bottom. Background: [PRODUCT.md](PRODUCT.md),
+[STOPPING.md](STOPPING.md), [BLOCKING-RESEARCH.md](BLOCKING-RESEARCH.md), [PLAN.md](PLAN.md).
+
+## Goal
+
+By the end, a person opening App Audit should get a short list of plain cases, each with an
+action that does not break the app, and evidence they can check. Accuracy first, then actions,
+then depth.
+
+## Ground rules while Tobiah is away
+
+- **Never change the PC's real settings.** No real switch apply, firewall rule, hosts file, NRPT
+  rule, service or task change. New change mechanisms are built and tested against sandbox
+  backends only; real use waits for Tobiah.
+- **No elevation.** Do not start anything as administrator (elevation is silent on this PC). The
+  helper that is already running may be used through its existing read commands.
+- **Do not touch Tobiah's running apps.** Never close one. Tests that launch apps use temporary
+  profiles and headless modes, and clean up after themselves.
+- **No pushes, no pull requests, nothing sent anywhere.** Public downloads of reference data and
+  web research are fine.
+- **Commit after every item** on `device-control`, with tests passing. Never commit with failing
+  tests.
+- **Verify** every visible change in the dashboard (browser pane) and every data change on the
+  real capture, not only in unit tests.
+- **Stuck for more than one cycle on an item:** write down why under the log and move on.
+- **Delete anything sensitive** a test produces (network logs, captured tokens).
+
+## Phase R: research (first, short)
+
+- [ ] R1. Where other reporting SDKs keep their queues on disk on Windows: Bugsnag, Datadog RUM,
+      App Center, Firebase, Amplitude, Segment, Mixpanel, Raygun, Unity, Unreal crash reporter.
+      Output: a table in BLOCKING-RESEARCH.md and the readers to add in R-build items below.
+- [ ] R2. Inspecting what Chromium's log misses: Firefox (MOZ_LOG HTTP logging), Node.js requests
+      inside Electron apps (--tls-keylog, NODE_OPTIONS and Electron fuses). Feasibility only.
+- [ ] R3. Server names from encrypted traffic: reading the name from the TLS ClientHello (SNI) in
+      Packet Monitor captures, and what Encrypted Client Hello hides. Goal: name the ~30% of
+      bytes that go to addresses with no name today.
+
+## Phase 1: accuracy (the critique's open items)
+
+- [ ] 1.1 Knowledge fixes: `spclient.wg.spotify.com` is Spotify's API, `lcs-*.adobe.io` is Adobe
+      licensing, `docs.*`/documentation hosts are not reporting. Add `blockable: yes|no|careful`
+      and reasons to domains.yaml; a test that every reporting entry has the field.
+- [ ] 1.2 Browsers: traffic from browsers to trackers is "websites you visit", shown apart from
+      the browser's own reporting (Firefox/Chrome/Edge telemetry hosts). Summary and app view.
+- [ ] 1.3 Leave out App Audit itself and development tools it runs (its own Python, uv) from
+      findings, or label them; same for Claude Code's own processes where identifiable.
+- [ ] 1.4 Unresolved "pid NNNN" actors under System: attribute or group them honestly.
+- [ ] 1.5 Proof for imported switches: give toptout switches an `expect` from the app's own
+      programs and known telemetry hosts where safe; otherwise mark "no proof available".
+
+## Phase 2: cases (PRODUCT.md)
+
+- [ ] 2.1 Findings engine: rules turn evidence into cases with a stable id, severity, one-sentence
+      statement of what was observed (never intent), evidence links, actions and a state
+      (open, fixed with proof, accepted, testing). Dismissals move into it.
+- [ ] 2.2 Contrasts: says against does (switch off, still active, using the fixed proof), used
+      against active (never opened, still sends), first party against third party (app sends
+      to a company other than its maker), new company for an app.
+- [ ] 2.3 Cases home page: open cases ranked, accepted and fixed behind a filter; each case links
+      to the app view sections and its actions. Target: about 10 open cases on this PC, each
+      readable in one sentence.
+- [ ] 2.4 Presence: per-minute "at the keyboard" from the input-time data Windows already keeps
+      (SRUM input seconds, and the watcher if feasible without new elevation); split traffic into
+      "while you were there" and "while you were away".
+
+## Phase 3: stopping reporting without breaking the app (STOPPING.md)
+
+- [ ] 3.1 Shared-address check from the names table, by time.
+- [ ] 3.2 Never-block list (Adobe licensing, Microsoft sign-in/time/licensing/Defender, Pi-hole
+      breakage knowledge) as data, with tests.
+- [ ] 3.3 Method chooser: (sender, destination) to switch / stop program / address block / name
+      block / nothing safe, with reasons; tests from the table in STOPPING.md.
+- [ ] 3.4 Address-block and name-block backends with sandbox implementations, journal and undo,
+      and helper commands that take ids only. Real backends written but not run.
+- [ ] 3.5 "Stop it" in each case and app view: preview of what stops and what might break;
+      apply disabled for real backends until Tobiah enables them.
+- [ ] 3.6 Startup control: "stop it starting by itself" for apps never opened (Dropbox, Zoom,
+      Logi Options+...), as switches on the inventory's startup entries, sandbox-tested.
+
+## Phase 4: depth
+
+- [ ] 4.1 More on-disk readers from R1 (Bugsnag, App Center, Unity, Unreal, and whatever R1 finds
+      on this PC).
+- [ ] 4.2 Inspection improvements from R2 (Firefox headers via MOZ_LOG if feasible).
+- [ ] 4.3 Names from TLS ClientHello (R3) in the capture pipeline, with tests on recorded packets.
+- [ ] 4.4 Inspection results feed proof: an inspection after a switch counts as before/after
+      evidence for that switch.
+
+## Phase 5: robustness and safety
+
+- [ ] 5.1 Undo journal: values written as administrator must not come from a file the user's
+      programs can edit (sign or keep a copy on the helper's side); tests.
+- [ ] 5.2 Pipe: the helper accepts commands only from the dashboard (check the client process
+      and a shared secret); tests.
+- [ ] 5.3 Stale docs: README, PLAN.md status, RESEARCH.md; one place that says what is verified
+      and what is not.
+- [ ] 5.4 Test coverage for attribution, labels, digest; a fixture database from today's capture
+      with personal data removed.
+
+## Phase 6: worth keeping
+
+- [ ] 6.1 Weekly recap page: what changed, what was fixed and stayed fixed, what came back.
+- [ ] 6.2 Privacy report export (one HTML file) of cases and evidence.
+- [ ] 6.3 Morning summary for Tobiah: what was done in this phase, what to look at first, what
+      needs his decision (real applies, VM tests).
+
+## Progress log
+
+Newest first. Each entry: item, what changed, how it was verified, commit.
