@@ -81,7 +81,7 @@ def test_careful_destinations_carry_their_warning():
 def test_a_switch_tied_to_a_folder_covers_only_programs_in_it(tmp_path, monkeypatch):
     monkeypatch.setenv("APPDATA", str(tmp_path))
     switch = switches.build_switch({"id": "t.code", "title": "Code tool telemetry",
-                                    "detect": {"any": [{"glob": "%APPDATA%\Tool\code\*"}]},
+                                    "detect": {"any": [{"glob": r"%APPDATA%\Tool\code\*"}]},
                                     "checks": [{"type": "env", "name": "X", "private": "1"}],
                                     "expect": {"reporting_from": {"processes": ["tool.exe"]}}}, "T")
     inside = str(tmp_path / "Tool" / "code" / "2.1" / "tool.exe")
