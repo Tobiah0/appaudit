@@ -259,3 +259,5 @@ tr.example-row h3 { margin: 0 0 4px; }
 .field { display: flex; flex-direction: column; gap: 3px; }
 .field span { color: var(--muted); font-size: 12.5px; }
 .field input, .field select, .actions select { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+.case-title { font-size: 1.05rem; font-weight: 600; margin: 2px 0 6px; }
+.card.case .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }

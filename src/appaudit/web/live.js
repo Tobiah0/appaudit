@@ -312,5 +312,5 @@ setInterval(() => { if (!$("#page-activity").hidden || !$("#page-companies").hid
 window.addEventListener("load", () => {
   let saved = null;
   try { saved = localStorage.getItem("appaudit-page"); } catch (error) { /* private mode */ }
-  showPage(saved && document.getElementById(`page-${saved}`) ? saved : "summary");
+  showPage(saved && document.getElementById(`page-${saved}`) ? saved : "cases");
 });
