@@ -38,7 +38,47 @@ def _security(user_sid: str):
     return attributes
 
 
-def serve(handle_command: Callable[[dict], dict], should_stop: Callable[[], bool], name: str = PIPE_NAME) -> None:
+def is_dashboard(exe: str, cmdline: list[str]) -> bool:
+    """Whether a process is App Audit's own dashboard (or this helper): a Python interpreter or the
+    appaudit launcher, running App Audit. Another program running as the same user can imitate
+    this; see Commands for why the helper's changes stay safe even then."""
+    import os
+
+    name = os.path.basename(exe or "").lower()
+    text = " ".join(cmdline or []).lower()
+    if name not in ("python.exe", "pythonw.exe", "appaudit.exe"):
+        return False
+    return "appaudit" in text and ("appaudit.api" in text or "appaudit.exe" in text or "-m appaudit" in text)
+
+
+def client_identity(pipe) -> dict:
+    """Who is on the other end of the pipe."""
+    import os
+
+    import psutil
+
+    try:
+        pid = win32pipe.GetNamedPipeClientProcessId(pipe)
+        session = win32pipe.GetNamedPipeClientSessionId(pipe)
+    except pywintypes.error:
+        return {"pid": None, "dashboard": False}
+    try:
+        process = psutil.Process(pid)
+        exe, cmdline = process.exe(), process.cmdline()
+    except psutil.Error:
+        exe, cmdline = "", []
+    own_session = None
+    try:
+        import win32ts
+
+        own_session = win32ts.ProcessIdToSessionId(os.getpid())
+    except Exception:  # noqa: BLE001
+        pass
+    same_session = own_session is None or own_session == session
+    return {"pid": pid, "exe": exe, "dashboard": (pid == os.getpid() or is_dashboard(exe, cmdline)) and same_session}
+
+
+def serve(handle_command: Callable[..., dict], should_stop: Callable[[], bool], name: str = PIPE_NAME) -> None:
     """Serve one client at a time until `should_stop()` is true after a command."""
     attributes = _security(current_user_sid())
     while not should_stop():
@@ -49,12 +89,13 @@ def serve(handle_command: Callable[[dict], dict], should_stop: Callable[[], bool
             win32pipe.PIPE_UNLIMITED_INSTANCES, BUFFER, BUFFER, 0, attributes)
         try:
             win32pipe.ConnectNamedPipe(pipe, None)
+            client = client_identity(pipe)
             _status, raw = win32file.ReadFile(pipe, BUFFER)
             try:
                 request = json.loads(raw.decode("utf-8"))
                 if not isinstance(request, dict):
                     raise ValueError("a command must be a JSON object")
-                reply = handle_command(request)
+                reply = handle_command(request, client)
             except Exception as error:  # noqa: BLE001 - report to the caller, keep serving
                 reply = {"ok": False, "error": f"{type(error).__name__}: {error}"}
             win32file.WriteFile(pipe, json.dumps(reply, default=str).encode("utf-8"))

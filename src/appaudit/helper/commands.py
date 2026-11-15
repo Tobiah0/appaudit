@@ -34,10 +34,21 @@ class Commands:
     def register(self, name: str, handler) -> None:
         self._table[name] = handler
 
-    def handle(self, request: dict) -> dict:
+    # Commands that change the PC or what is recorded come only from App Audit's dashboard; anything
+    # else running as the user may read. Same-user software can imitate the dashboard (it can read
+    # everything the dashboard reads), so the real limit is what the commands can do: apply
+    # catalogue switches that reduce collection, undo from the helper's protected record, block a
+    # validated program or destination, and nothing else. No command takes a path, value or command
+    # line to run.
+    CHANGES = {"stop", "packets", "content", "content_clear", "switch_apply", "switch_undo", "block_add", "block_remove",
+               "history_refresh", "stop_address_add", "stop_name_add", "stop_remove", "stop_refresh", "tls_sample"}
+
+    def handle(self, request: dict, client: dict | None = None) -> dict:
         handler = self._table.get(request.get("cmd"))
         if handler is None:
             return {"ok": False, "error": f"unknown command {request.get('cmd')!r}"}
+        if request.get("cmd") in self.CHANGES and not (client is None or client.get("dashboard")):
+            return {"ok": False, "error": "only the App Audit dashboard may ask the helper to change something"}
         return {"ok": True, **(handler(request) or {})}
 
     def _status(self, _request: dict) -> dict:
