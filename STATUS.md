@@ -33,7 +33,7 @@ in-memory backend; "not run" means the code exists and its unit tests pass, noth
 | Undo, including the helper's protected record in %ProgramData%\AppAudit | Sandbox only; the folder lock-down needs an elevated run |
 | Per-program network block (Windows Firewall) | Sandbox only |
 | Address and name blocks (stops.py) | Sandbox only; real use is switched off in code (`REAL_ENABLED = False`) |
-| Helper accepts changes only from the dashboard | Unit tests and the real process list; takes effect at the next helper start |
+| Helper accepts changes only from the dashboard | Verified on the dev PC after the 2026-11-15 restart: another program's change request is refused, its reads work, the dashboard's change is accepted |
 
 ## Proof
 
@@ -46,8 +46,8 @@ in-memory backend; "not run" means the code exists and its unit tests pass, noth
 
 ## Needs Tobiah
 
-- Restart the helper (elevated) to pick up 5.1, 5.2 and the TLS sampling code; then try one
-  administrator switch and its undo, and check the protected folder's permissions.
+- The helper was restarted on 2026-11-15 with the new code. Still to do: one administrator switch and
+  its undo, which creates the protected folder; then check its permissions.
 - Decide whether to turn on real address and name blocks (`stops.REAL_ENABLED`) and TLS sampling
   (`TLS_SAMPLE_EVERY`).
 - Run Inspect this app on Firefox, Discord or Spotify (they have to be closed first).
