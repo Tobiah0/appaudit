@@ -54,10 +54,10 @@ then depth.
 
 ## Phase 2: cases (PRODUCT.md)
 
-- [ ] 2.1 Findings engine: rules turn evidence into cases with a stable id, severity, one-sentence
+- [x] 2.1 Findings engine: rules turn evidence into cases with a stable id, severity, one-sentence
       statement of what was observed (never intent), evidence links, actions and a state
       (open, fixed with proof, accepted, testing). Dismissals move into it.
-- [ ] 2.2 Contrasts: says against does (switch off, still active, using the fixed proof), used
+- [x] 2.2 Contrasts: says against does (switch off, still active, using the fixed proof), used
       against active (never opened, still sends), first party against third party (app sends
       to a company other than its maker), new company for an app.
 - [ ] 2.3 Cases home page: open cases ranked, accepted and fixed behind a filter; each case links
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **2.1 + 2.2** (done): `cases.py` builds cases with stable ids, severity, one-sentence statements of what was observed, evidence, actions (the app's switches) and states (open, accepted, testing; fixed when a says-vs-does case disappears). Accepted cases reopen when their fingerprint changes (new company, 4x more data). Dismissed apps count as accepted. Contrasts: says vs does, can be switched off, third party (destination company is not the app's maker), unused vs active (updaters excluded, small ones grouped), new company. On the real capture: 14 open cases (from 25 before grouping), e.g. "Claude sent 11.8 MB to Datadog, Intercom, not to Anthropic PBC." API `/api/cases`, `/api/cases/decide`. Build takes ~9 s, cached 60 s; to speed up later. 154 tests.
 - **1.5** (done): new proof rule `reporting_from`: a product's own programs sending to destinations the knowledge base calls reporting. 74 of 183 imported switches now have proof (the rest are steps-only or share a program with another product). Runs with their own profile (`--user-data-dir`) are not counted, because the user's settings do not govern them. Real result: Tobiah's VS Code telemetry switch shows **off and quiet**; without the profile rule Claude's blank-profile test would have made it look "off but still active". 144 tests.
 - **1.4** (done): processes known only by id borrow the program of an overlapping record with the same id; any left over go into one group, "Programs that ended before they could be identified". On the real capture all 106 were resolved; no `pid NNNN` rows remain and System lists only System. 143 tests.
 - **1.3** (done): interpreters (Python, Node, Java...) are attributed to what they run: App Audit itself (kept out of findings), scripts run by Claude Code, a `-m` module or a project found by its venv or project files. Real data: the 23.7 MB "Python" traffic was Tobiah's own project `novel_ultimate (backend)`; the 68 destinations incl. Facebook/Mixpanel were Claude's research scripts. Python and dev tools no longer appear as "active though never opened". 141 tests.

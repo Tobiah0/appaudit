@@ -374,6 +374,12 @@
   purpose: Product usage analytics
   blockable: "yes"
   suffixes: [mixpanel.com, mxpnl.com]
+- company: Splunk
+  category: telemetry
+  vendor_site: true
+  purpose: Log and event collection (Splunk Cloud) used by apps to send their logs
+  blockable: "yes"
+  suffixes: [splunkcloud.com, splunk.com]
 - company: Bugsnag
   category: telemetry
   vendor_site: true

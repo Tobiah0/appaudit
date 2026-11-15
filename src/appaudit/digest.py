@@ -49,9 +49,9 @@ def _reporting_runs(since: float) -> list[dict]:
             for name, runs in counts.most_common()]
 
 
-def build(hours: float = 12) -> dict:
+def build(hours: float = 12, report: dict | None = None, snapshot: dict | None = None) -> dict:
     since = time.time() - hours * 3600
-    snapshot = activity.snapshot(since=since)
+    snapshot = snapshot if snapshot is not None else activity.snapshot(since=since)
     apps = _apps_by_id()
     helper = activity.helper_state()
 
@@ -84,7 +84,7 @@ def build(hours: float = 12) -> dict:
     reporters.sort(key=lambda item: -item["sent"])
     idle_but_active.sort(key=lambda item: -(item["sent"] + item["received"]))
 
-    report = proof.report(hours)
+    report = report if report is not None else proof.report(hours)
     contradictions = [{"title": item["title"], "seen": item["window"], "text": item["text"]}
                       for item in report["items"] if item["verdict"] == "off_but_active"]
     return {

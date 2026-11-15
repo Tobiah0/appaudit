@@ -228,6 +228,30 @@ def get_app_ondisk(actor: str) -> dict:
     return cached(("ondisk", actor), 30, lambda: ondisk.for_app(exes, found.get("name") or "", found.get("publisher") or ""))
 
 
+# --- cases: the short list ----------------------------------------------------------------------
+
+@app.get("/api/cases")
+def get_cases(hours: float = 24) -> dict:
+    from . import cases
+
+    hours = min(max(hours, 1), 24 * 30)
+    built = cached(("cases-built", hours), 60, lambda: cases.build(hours))
+    return cases.listing(hours, built=[dict(case) for case in built])
+
+
+@app.post("/api/cases/decide")
+async def post_case_decision(request: Request) -> dict:
+    """Accept a case ("it's fine"), mark it as being tested, or open it again."""
+    from . import cases
+
+    body = await request.json()
+    try:
+        cases.decide(str(body.get("id", "")), str(body.get("state", "")), str(body.get("fingerprint", "")), body.get("note"))
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from error
+    return {"ok": True}
+
+
 # --- inspect this app: run it with its own network log ------------------------------------------
 # Starts or closes only programs the watcher recorded for this app, and only when the person
 # presses the button.
