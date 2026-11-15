@@ -30,7 +30,7 @@ then depth.
 
 ## Phase R: research (first, short)
 
-- [ ] R1. Where other reporting SDKs keep their queues on disk on Windows: Bugsnag, Datadog RUM,
+- [x] R1. Where other reporting SDKs keep their queues on disk on Windows: Bugsnag, Datadog RUM,
       App Center, Firebase, Amplitude, Segment, Mixpanel, Raygun, Unity, Unreal crash reporter.
       Output: a table in BLOCKING-RESEARCH.md and the readers to add in R-build items below.
 - [ ] R2. Inspecting what Chromium's log misses: Firefox (MOZ_LOG HTTP logging), Node.js requests
@@ -111,3 +111,5 @@ then depth.
 ## Progress log
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
+
+- **R1** (done): web docs were thin, so the dev PC was surveyed. New sources for 4.1: Bugsnag folders (Docker Desktop), Unreal `Saved\Crashes` with CrashContext XML (4 games), Unity `Player.log` with analytics SDK lines (RACCOIN: 717 GameAnalytics lines), analytics IDs in Electron Local Storage (Riot: Datadog, Statsig). Table added to BLOCKING-RESEARCH.md.

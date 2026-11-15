@@ -131,3 +131,23 @@ carry over. Its code signatures are Java package names and do not carry over.
 - [Disable NVIDIA telemetry (gHacks)](https://www.ghacks.net/?p=126026)
 - [TrackerSift (IMC 2021)](https://arxiv.org/pdf/2108.13923.pdf)
 - [Duumviri: detecting trackers with a breakage detector](https://arxiv.org/pdf/2402.08031)
+
+## Where reporting SDKs keep data on disk (checked on the dev PC, 2026-11-14)
+
+Web documentation on this is thin, so the table comes mostly from what is actually on the dev PC.
+App Audit reads the first three already; the rest are item 4.1 of [24H-PLAN.md](24H-PLAN.md).
+
+| SDK | Location | What is there | On the dev PC |
+|---|---|---|---|
+| Sentry (JavaScript, Electron) | `<app data>\sentry\` | `scope_v3.json` (user record, device sections, activity log), `session.json`, `queue\` envelopes | Claude, Discord, Riot Client, two games |
+| sentry-native | `<app data>\.sentry-native\` | `*.run\` session folders, `*.envelope` | RSDragonwilds |
+| Crashpad (Chromium) | `<app data>\Crashpad\` | `settings.dat` (uploads on/off, install ID), dumps in `reports\`/`pending\`/`completed\` | about 20 apps |
+| Bugsnag (Electron) | `<app data>\bugsnag\<key hash>\` | `device.json`, `events\`, `sessions\`, `runinfo\`, `last-run-info.json` | Docker Desktop |
+| Unreal Engine crash reporter | `%LOCALAPPDATA%\<Game>\Saved\Crashes\<id>\` | `CrashContext.runtime-xml` (machine, account and user fields, GPU, engine version), `CrashReportClient.ini`, `UE4Minidump.dmp` | Witchfire (2), Half Sword, Discovery |
+| Unity player | `%USERPROFILE%\AppData\LocalLow\<Company>\<Product>\Player.log` | The game's log; analytics SDKs write to it (GameAnalytics: design events, error events, queue activity) | 15 games; RACCOIN has 717 GameAnalytics lines |
+| Browser-style SDKs in Electron apps (Datadog RUM, Statsig, Segment, Amplitude, Mixpanel, LaunchDarkly, PostHog) | `<app data>\Local Storage\leveldb\` | Session and anonymous IDs, cached experiment assignments, under well-known keys (`_dd_s`, `statsig.*`, `ajs_anonymous_id`, `AMP_*`, `mp_*_mixpanel`) | Riot Client: Datadog session, Statsig evaluations |
+| App Center, Amplitude and Firebase desktop SDKs | not found | no documentation found and nothing on this PC | not checked further |
+
+Sources: [Unity CrashReporting.crashReportFolder](https://docs.unity3d.com/ScriptReference/Windows.CrashReporting-crashReportFolder.html),
+[@bugsnag/electron-filestore](https://socket.dev/npm/package/@bugsnag/electron-filestore),
+[Sentry Electron offline support](https://docs.sentry.io/platforms/javascript/guides/electron/features/offline-support).
