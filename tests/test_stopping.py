@@ -76,3 +76,15 @@ def test_never_block_hosts_are_left_alone():
 def test_careful_destinations_carry_their_warning():
     result = pick("claude.exe", dest("nexus-websocket-a.intercom.io", "Intercom"), "Anthropic PBC")
     assert result["method"] == "address_block" and result["reasons"][0].startswith("Careful:")
+
+
+def test_a_switch_tied_to_a_folder_covers_only_programs_in_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    switch = switches.build_switch({"id": "t.code", "title": "Code tool telemetry",
+                                    "detect": {"any": [{"glob": "%APPDATA%\Tool\code\*"}]},
+                                    "checks": [{"type": "env", "name": "X", "private": "1"}],
+                                    "expect": {"reporting_from": {"processes": ["tool.exe"]}}}, "T")
+    inside = str(tmp_path / "Tool" / "code" / "2.1" / "tool.exe")
+    elsewhere = str(tmp_path / "Programs" / "Tool" / "tool.exe")
+    assert stopping._covers(switch, "tool.exe", "api.mixpanel.com", inside)
+    assert not stopping._covers(switch, "tool.exe", "api.mixpanel.com", elsewhere)

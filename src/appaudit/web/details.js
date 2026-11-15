@@ -231,6 +231,53 @@ function ondiskSection(actor) {
   return card;
 }
 
+// --- how to stop its reporting: one method per destination ---------------------------------------
+
+const stopPlans = { byActor: new Map() };
+const METHOD_LABEL = {
+  switch: ["private", "Use a setting"], stop_program: ["partly", "Stop the program that reports"],
+  address_block: ["partly", "Block it for this program"], name_block: ["partly", "Block the name on this PC"],
+  nothing_safe: ["na", "Nothing safe"],
+};
+
+async function loadStopPlan(actorId) {
+  const response = await fetch(`/api/stop-plan?actor=${encodeURIComponent(actorId)}`);
+  stopPlans.byActor.set(actorId, response.ok ? await response.json() : { error: "Could not work out how to stop it." });
+  renderLive();
+  if (typeof renderCases === "function" && casesState.data) renderCases();
+}
+
+// For each reporting destination: the least damaging method, why, and exactly what it would change.
+function stopPlanView(actorId, key) {
+  const data = stopPlans.byActor.get(actorId);
+  if (data === undefined) {
+    stopPlans.byActor.set(actorId, null);
+    loadStopPlan(actorId);
+  }
+  let body;
+  if (!data) body = el("div", { class: "sub", text: "Working out the safest way…" });
+  else if (data.error) body = el("div", { class: "none", text: data.error });
+  else if (!data.plans.length) body = el("div", { class: "sub", text: "Nothing it sends goes to a reporting or advertising service." });
+  else {
+    body = data.plans.map((plan) => {
+      const [kind, label] = METHOD_LABEL[plan.method] || ["na", plan.method];
+      const action = plan.method === "switch" ? el("div", { class: "sub", text: `Use the setting "${plan.title}" above.` })
+        : plan.method === "stop_program" ? el("div", { class: "sub", text: `Use "Network block" for ${plan.sender} further down; it only reports.` })
+          : (plan.method === "address_block" || plan.method === "name_block")
+            ? el("div", {}, el("pre", { class: "plan", text: plan.preview }),
+              el("button", { type: "button", class: "small", disabled: "", title: "Real blocking is switched off in this version",
+                text: data.real_enabled ? "Apply" : "Apply (switched off in this version)" }))
+            : null;
+      return el("div", { class: "row" }, el("div", { class: "grow" },
+        el("div", { class: "mono", text: `${plan.sender} → ${plan.destination}` }),
+        el("div", { class: "sub", text: `${plan.company || "Unknown company"} · sent ${bytes(plan.sent)}` }),
+        el("ul", { class: "facts" }, plan.reasons.map((reason) => el("li", { text: reason }))), action),
+      el("span", { class: `state ${kind}`, text: label }));
+    });
+  }
+  return fold(key, "How to stop each destination without breaking the app", body);
+}
+
 // --- inspect this app: run it with its own network log ---------------------------------------------
 
 const inspectState = { byActor: new Map(), reports: new Map(), choice: new Map(), message: new Map(), busy: false };

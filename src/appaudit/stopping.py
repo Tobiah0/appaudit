@@ -26,7 +26,44 @@ from .naming import labels
 REPORTER_SHARE = 0.9
 
 
-def _covers(switch, sender: str, host: str | None) -> bool:
+def _locations(detect: dict | None) -> list[str]:
+    """Program locations a switch is tied to (paths, folder patterns, resolved commands)."""
+    import os
+    import shutil
+
+    if not detect:
+        return []
+    found = []
+    for item in detect.get("any") or []:
+        found += _locations(item)
+    for key in ("path", "glob"):
+        values = detect.get(key) or []
+        found += [os.path.expandvars(v) for v in (values if isinstance(values, list) else [values])]
+    commands = detect.get("command") or []
+    for command in commands if isinstance(commands, list) else [commands]:
+        resolved = shutil.which(str(command))
+        if resolved:
+            found.append(os.path.realpath(resolved))
+    return found
+
+
+def _at_location(exe: str | None, locations: list[str]) -> bool:
+    import fnmatch
+    import os
+
+    if not exe or not locations:
+        return True                                  # nothing to tell programs apart by
+    target = os.path.normcase(os.path.realpath(exe))
+    for location in locations:
+        pattern = os.path.normcase(location)
+        if target == pattern or fnmatch.fnmatch(target, pattern) or fnmatch.fnmatch(target, os.path.join(pattern, "*"))                 or target.startswith(pattern.rstrip("*").rstrip("\\") + os.sep):
+            return True
+    return False
+
+
+def _covers(switch, sender: str, host: str | None, exe: str | None = None) -> bool:
+    if not _at_location(exe, _locations(switch.detect) if _path_specific(switch.detect) else []):
+        return False                                 # same program name, different program
     expect = switch.expect or {}
     sender = sender.lower()
     processes = {name.lower() for name in expect.get("processes") or []}
@@ -39,6 +76,14 @@ def _covers(switch, sender: str, host: str | None) -> bool:
     if sender in senders and on_domain:
         return True
     return sender in reporting and bool(host) and labels.for_name(host)["category"] in labels.REPORTING
+
+
+def _path_specific(detect: dict | None) -> bool:
+    if not detect:
+        return False
+    if any(key in detect for key in ("glob", "path")):
+        return True
+    return any(_path_specific(item) for item in detect.get("any") or [])
 
 
 def program_shares(conn: sqlite3.Connection, proc_ids: list[int], names: dict[str, list[str]]) -> dict[str, dict]:
@@ -58,12 +103,12 @@ def program_shares(conn: sqlite3.Connection, proc_ids: list[int], names: dict[st
 
 
 def choose(*, sender: str, sender_share: dict | None, destination: dict, publisher: str | None,
-           switches: list, switch_states: dict[str, str], shared: dict) -> dict:
+           switches: list, switch_states: dict[str, str], shared: dict, exe: str | None = None) -> dict:
     """The method for one (sending program, destination) pair, with the reasons."""
     host = destination.get("name")
     reasons: list[str] = []
     for switch in switches:
-        if switch_states.get(switch.id) in ("exposed", "partly") and _covers(switch, sender, host):
+        if switch_states.get(switch.id) in ("exposed", "partly") and _covers(switch, sender, host, exe):
             return {"method": "switch", "switch": switch.id, "title": switch.title,
                     "reasons": [f"The setting \"{switch.title}\" covers {sender} sending to {host or 'this destination'}."]}
     never = blocking.never_block(host)
@@ -120,11 +165,12 @@ def plan_for_actor(actor: dict) -> list[dict]:
         for destination in reporting:
             host = destination.get("name")
             shared = blocking.shared(conn, host) if host else {"clean": False}
-            for sender in senders_by_host.get(host, [actor.get("process") or ""])[:3]:
+            for sender, exe in senders_by_host.get(host, [(actor.get("process") or "", None)])[:3]:
                 plans.append({"destination": host or destination["address"], "company": destination.get("company"),
-                              "sent": destination["sent"], "sender": sender,
+                              "sent": destination["sent"], "sender": sender, "exe": exe,
                               **choose(sender=sender, sender_share=shares.get(sender), destination=destination,
-                                       publisher=actor.get("publisher"), switches=candidates, switch_states=states, shared=shared)})
+                                       publisher=actor.get("publisher"), switches=candidates, switch_states=states,
+                                       shared=shared, exe=exe)})
         return plans
     finally:
         conn.close()
@@ -132,12 +178,12 @@ def plan_for_actor(actor: dict) -> list[dict]:
 
 def _senders(conn: sqlite3.Connection, proc_ids: list[int], names: dict[str, list[str]]) -> dict[str, list[str]]:
     """Which programs sent to each host name, the biggest sender first."""
-    totals: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    totals: dict[str, dict[tuple, int]] = defaultdict(lambda: defaultdict(int))
     for start in range(0, len(proc_ids), 500):
         chunk = proc_ids[start:start + 500]
         marks = ",".join("?" * len(chunk))
-        for name, remote, sent in conn.execute(
-                f"SELECT p.name, f.remote, f.sent FROM flows f JOIN procs p ON p.id = f.proc_id WHERE f.proc_id IN ({marks})", chunk):
+        for name, exe, remote, sent in conn.execute(
+                f"SELECT p.name, p.exe, f.remote, f.sent FROM flows f JOIN procs p ON p.id = f.proc_id WHERE f.proc_id IN ({marks})", chunk):
             for host in names.get(remote, []):
-                totals[host][name] += sent
-    return {host: sorted(by, key=lambda n: -by[n]) for host, by in totals.items()}
+                totals[host][(name, exe)] += sent
+    return {host: sorted(by, key=lambda key: -by[key]) for host, by in totals.items()}

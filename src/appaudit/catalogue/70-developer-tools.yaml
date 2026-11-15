@@ -46,8 +46,11 @@ switches:
      checks: [{type: env, name: WRANGLER_SEND_METRICS, private: 'false'}]}
   - {id: dev.expo, detect: {command: node}, title: Expo CLI telemetry, explain: The Expo CLI reports usage data.,
      checks: [{type: env, name: EXPO_NO_TELEMETRY, private: '1'}]}
-  - {id: dev.claude-code, detect: {command: claude}, title: Claude Code telemetry, explain: Claude Code reports usage statistics to Anthropic.,
-     source: 'https://docs.claude.com/en/docs/claude-code/data-usage', checks: [{type: env, name: DISABLE_TELEMETRY, private: '1'}]}
+  - {id: dev.claude-code, detect: {any: [{command: claude}, {glob: '%APPDATA%\Claude\claude-code\*'}]}, title: Claude Code telemetry and error reporting,
+     explain: 'Claude Code, including the copy inside the Claude app, reports usage statistics and errors to Anthropic and the services it uses.',
+     source: 'https://docs.claude.com/en/docs/claude-code/data-usage',
+     checks: [{type: env, name: DISABLE_TELEMETRY, private: '1'}, {type: env, name: DISABLE_ERROR_REPORTING, private: '1'}],
+     expect: {reporting_from: {processes: [claude.exe]}}}
   - {id: dev.streamlit, detect: {command: [streamlit, python]}, title: Streamlit usage statistics, explain: Streamlit apps report usage statistics.,
      checks: [{type: env, name: STREAMLIT_BROWSER_GATHER_USAGE_STATS, private: 'false'}]}
   - {id: dev.meilisearch, detect: {command: meilisearch}, title: Meilisearch analytics, explain: Meilisearch reports usage data.,

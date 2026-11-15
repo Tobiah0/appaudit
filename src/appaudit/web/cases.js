@@ -128,7 +128,7 @@ function caseCard(item) {
       el("div", { class: "grow" },
         el("div", { class: "sub", text: `${CASE_KINDS[item.kind] || item.kind}${item.reopened ? " · changed since you marked it fine" : ""}` }),
         el("div", { class: "case-title", text: item.title }),
-        evidenceView(item), plans,
+        evidenceView(item), item.kind === "third_party" && item.actor ? stopPlanView(item.actor, `case|${item.id}|stop`) : null, plans,
         el("div", { class: "actions" }, actions)),
       el("span", { class: `state ${kind}`, text: label })));
 }

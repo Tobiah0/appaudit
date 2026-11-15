@@ -153,6 +153,7 @@ def programs_of(switch: Switch, shared_hosts: set[str] = frozenset()) -> set[str
     expect = switch.expect or {}
     found |= {name.lower() for name in expect.get("processes") or []}
     found |= {name.lower() for name in (expect.get("senders") or {}).get("processes") or []} - shared_hosts
+    found |= {name.lower() for name in (expect.get("reporting_from") or {}).get("processes") or []}
     return found
 
 

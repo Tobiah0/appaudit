@@ -336,6 +336,24 @@ def post_inspection_delete(inspection_id: str) -> dict:
     return {"deleted": True}
 
 
+@app.get("/api/stop-plan")
+def get_stop_plan(actor: str) -> dict:
+    """How each reporting destination of an app could be stopped, with what it would change."""
+    from . import stopping, stops
+
+    found = _actor(actor)
+    plans = cached(("stop-plan", actor), 30, lambda: stopping.plan_for_actor(found))
+    for item in plans:
+        if item["method"] == "address_block":
+            item["preview"] = "\n".join(["Windows Firewall, outbound, block",
+                                         f"  program:   {item.get('exe') or item['sender']}",
+                                         f"  addresses: {', '.join(item['addresses'])}",
+                                         "  group:     App Audit (removable here or in Windows)"])
+        elif item["method"] == "name_block":
+            item["preview"] = "\n".join(["hosts file, App Audit's own section:", f"  0.0.0.0 {item['name']}"])
+    return {"plans": plans, "real_enabled": stops.REAL_ENABLED}
+
+
 @app.get("/api/switches/for-app")
 def get_switches_for_app(actor: str) -> dict:
     """The switches that concern one app on the Activity page, with their current state."""

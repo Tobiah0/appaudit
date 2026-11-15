@@ -191,12 +191,11 @@ function reportingSection(actor) {
   if (data.error) { card.append(el("div", { class: "none", text: data.error })); return card; }
   if (reporting.message && reporting.message.actor === actor.id) card.append(el("div", { class: "notice", text: reporting.message.text }));
   if (!data.length) {
-    card.append(el("div", { class: "sub", text: "No known setting turns off this app's reporting. Blocking it is the remaining option, "
-      + "and that usually stops the app working too." }));
+    card.append(el("div", { class: "sub", text: "No known setting turns off this app's reporting." }), stopPlanView(actor.id, `${actor.id}|stopplan`));
     return card;
   }
   card.append(el("div", { class: "sub", text: "The app's own settings. Each change is shown exactly before it is made, and can be undone." }),
-    ...data.map((item) => reportingRow(actor, item)));
+    ...data.map((item) => reportingRow(actor, item)), stopPlanView(actor.id, `${actor.id}|stopplan`));
   return card;
 }
 
