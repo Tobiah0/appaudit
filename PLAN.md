@@ -32,7 +32,7 @@ src/appaudit/
   switches/         catalogue engine: read, apply, undo, journal, sandbox
   proof.py drift.py before/after verdicts; what changed
   explain/          fact sheets and the knowledge base
-  xray/             Windows telemetry rule files, counters, Diagnostic Data Viewer reader
+  helper/inspect.py Windows telemetry rule files, counters, Diagnostic Data Viewer reader
   api.py web/       dashboard
 catalogue/          one YAML file per group of switches
 knowledge/          endpoint purposes, component descriptions, vendor map
@@ -101,31 +101,8 @@ Phases 2 to 7 and 10 are never cut.
 
 ## Status
 
-Updated 2026-11-14 08:45.
-
-Done and committed on branch `device-control` (40 tests pass, none changes the PC):
-
-- Phases 1-4: tracing module, decoders, elevated helper with a user-only command pipe, attribution
-  to apps, services and tasks, destination naming and labelling.
-- Phase 5: 60-day history imported from SRUM. Prefetch and BAM are not imported.
-- Phase 6: dashboard pages Summary, Activity, Companies, Background runs, 60-day history, Apps.
-- Phases 7-8: switch engine with sandbox, journal and undo; 120 switches, each read on the dev PC.
-- Phase 9: per-app block through Windows Firewall. The "quiet this app" bundle and the DNS filter
-  prototype were cut.
-- Phase 10: proof engine with before/after verdicts, tested on a synthetic database.
-- Phase 11: drift log for switches. Inventory diffs between scans are not done.
-- Phase 12: knowledge base of about 90 programs and 46 trace sessions. Search and the AI hook are
-  not done.
-- Phase 13: Windows telemetry page and Who is listening page. The Diagnostic Data Viewer reader is
-  written but untested on live data. Opt-in request content is not done.
-- Phase 15 (digest) is the Summary page. Part of phase 25: request guard with tests.
-
-Not verified:
-
-- No real switch, firewall rule or undo has been applied. Those paths ran only in the sandbox.
-- Task-to-process attribution was fixed after a bug with reused process ids; the fix has run for
-  only a short time.
-
-Not started: phases 14, 16-24, 26-27, demo mode.
+Moved to [STATUS.md](STATUS.md), which says for every part whether it was verified on the dev PC,
+only in the sandbox, or not run. The work after the original phases is in
+[24H-PLAN.md](24H-PLAN.md) (cases, stopping reporting, inspections, safety).
 
 Run: `uv run appaudit`, then Start watching. Helper alone: `uv run python -m appaudit.helper --launch`.

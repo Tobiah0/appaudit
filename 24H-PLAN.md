@@ -96,7 +96,7 @@ then depth.
       programs can edit (sign or keep a copy on the helper's side); tests.
 - [x] 5.2 Pipe: the helper accepts commands only from the dashboard (check the client process
       and a shared secret); tests.
-- [ ] 5.3 Stale docs: README, PLAN.md status, RESEARCH.md; one place that says what is verified
+- [x] 5.3 Stale docs: README, PLAN.md status, RESEARCH.md; one place that says what is verified
       and what is not.
 - [ ] 5.4 Test coverage for attribution, labels, digest; a fixture database from today's capture
       with personal data removed.
@@ -112,6 +112,8 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **Stopped early** (Tobiah asked to finish up): 5.4 (tests for attribution, labels, digest; fixture database), 6.1 (weekly recap) and 6.2 (privacy report export) were not started. The summary is in STATUS.md and the chat.
+- **5.3** (done): STATUS.md is the one place that says, part by part, what was verified on the dev PC, what ran only in the sandbox and what needs Tobiah. README gains the Cases page, imported and startup switches, the current test count and a link to STATUS.md; PLAN.md's status section points there and the nonexistent `xray/` folder is gone. 212 tests.
 - **5.2** (done; running helper not restarted): the pipe now identifies each client (GetNamedPipeClientProcessId and session id); commands that change the PC or what is recorded (switches, undo, blocks, stops, content capture, packets, TLS sampling, stopping the helper) are accepted only from App Audit's dashboard in the same Windows session; read-only commands stay open to the user's programs. A shared secret was considered and rejected: anything the dashboard can read, same-user software can read too, so the code says plainly that the remaining limit is what the commands can do (catalogue switches, protected undo, validated blocks; no command takes a value, path or command line). Checked against the real process list: the dashboard and helper are recognised, probe scripts mentioning "appaudit" are not. Takes effect when the helper is next started. 212 tests.
 - **5.1** (done; real lock-down untested): administrator switch changes are journaled first in `%ProgramData%\AppAudit\journal.db`, a folder the helper creates and locks to SYSTEM and Administrators (users read only; owner reset to Administrators; fails closed if that cannot be done). The user's journal gets a display copy with the same id. Administrator undo reads only the protected record, so editing the user copy cannot change what the helper writes. The helper also refuses to remove firewall rules whose names are not App Audit's own (blocks and stops). Tests: tampered user copy is ignored on undo; unknown protected entries refused; foreign rule names refused; protected folder refused without admin. The ACL code itself needs an elevated run and has not been executed. 206 tests.
 - **4.4** (done): `proof.inspection_evidence` finds finished inspections of a switch's programs and counts requests that went to what the switch should stop (its domains, or reporting destinations for reporting_from rules), marking whether the run was after the change. Shown on the Proof page as "Inspection: quiet/still active". Real result: VS Code's telemetry switch (applied 18:46) has an inspection after the change: 0 of 68 requests went to reporting destinations. Checked in the browser. 202 tests.

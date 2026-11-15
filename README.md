@@ -14,13 +14,14 @@ one-time download of public reference lists, and it appears in its own results.
 
 | Page | What it shows |
 |---|---|
+| Cases | The home page: a short list of plain sentences about what was observed, each with its evidence and what you can do (a switch, a safe block, or why nothing is safe), and "It's fine" to hide it until it changes |
 | Summary | The findings for a time window: settings that are off but still active, apps that sent data to reporting or ad services, apps active though you never open them |
 | Activity | Every app and Windows component that used the network, where it sent data, and what each destination is for |
 | Companies | Which companies received data, and from which of your apps |
 | Background runs | Programs that started by themselves, what each one is, and which scheduled task started it |
 | 60-day history | Windows' own record of per-app network use from before the watcher ran |
 | Apps | The inventory: what starts by itself, what uses camera, mic and location, when you last opened it |
-| Switches | 120 privacy switches for Windows, Edge, Office, other vendors and developer tools, with their current state, apply and undo |
+| Switches | 120 hand-written switches, about 180 imported from the toptout opt-out database, and "starting by itself" switches for unused apps; each shows the exact change (a diff for config files) before it is made, and can be undone |
 | Proof | Each switch against the evidence: "off and quiet", "off but still active", and before/after once you change one here |
 | Windows telemetry | Windows' own upload counters, its collection services, and the rule files it downloads from Microsoft |
 | Who is listening | Every event-trace subscription running on the PC and what it can see |
@@ -46,12 +47,14 @@ uv run python -m appaudit.naming.reference    # optional: download public refere
 uv run appaudit                               # opens the dashboard at http://127.0.0.1:8756
 ```
 
+Status of every part, verified or not: [STATUS.md](STATUS.md).
+
 Press **Start watching** in the dashboard. Windows asks for administrator rights for the watcher
 (the "helper"); the dashboard itself never runs elevated. Without the watcher the Apps and Switches
 pages still work.
 
 ```
-uv run pytest        # 40 tests; none of them changes the PC
+uv run pytest        # about 210 tests; none of them changes the PC
 ```
 
 ## How it works
