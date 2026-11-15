@@ -196,6 +196,15 @@ function crashpadView(source, key) {
         el("td", { text: when(d.modified) }))))) : null];
 }
 
+// Bugsnag, Unreal crash reports, Unity logs, Local Storage IDs: facts (identifying ones hidden) and items.
+function factsView(source, key) {
+  return [source.note ? el("div", { class: "sub", text: source.note }) : null,
+    source.facts.length ? kv(source.facts.map(([label, value, identifying]) => [label, identifying ? secret(value) : String(value)])) : null,
+    source.items && source.items.length ? fold(`${key}|items`, `Stored items (${source.total})`, smallTable(["Item", "Written", "Size", "Detail"],
+      source.items.map((item) => el("tr", {}, el("td", { class: "mono", text: item.name }), el("td", { text: when(item.modified) }),
+        el("td", { class: "num", text: item.size ? bytes(item.size) : "" }), el("td", { class: "sub", text: item.detail || "" }))))) : null];
+}
+
 function genericView(source, key) {
   return [el("div", { text: `${plural(source.files_total, "file")}, ${bytes(source.bytes_total)}` }),
     fold(`${key}|files`, "Files", smallTable(["File", "Size", "Written"], source.files.map((f) => el("tr", {},
@@ -224,7 +233,7 @@ function ondiskSection(actor) {
     const key = `${actor.id}|${source.path}`;
     const body = source.error ? [el("div", { class: "none", text: source.error })]
       : source.kind === "sentry" || source.kind === "sentry-native" ? sentryView(source, key)
-        : source.kind === "crashpad" ? crashpadView(source, key) : genericView(source, key);
+        : source.kind === "crashpad" ? crashpadView(source, key) : source.facts ? factsView(source, key) : genericView(source, key);
     card.append(el("div", { class: "row" }, el("div", { class: "grow" },
       el("div", { class: "name", text: source.title }), el("div", { class: "sub mono", text: source.path }), body)));
   }

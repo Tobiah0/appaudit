@@ -74,8 +74,9 @@ def find_roots(exes: list[str], name: str = "", publisher: str = "") -> list[Pat
     """The app's own data folders under Roaming and Local application data."""
     keys = keys_for(exes, name, publisher)
     roots = []
-    for var in ("APPDATA", "LOCALAPPDATA"):
-        base = os.environ.get(var)
+    bases = [os.environ.get("APPDATA"), os.environ.get("LOCALAPPDATA"),
+             os.path.join(os.environ.get("USERPROFILE", ""), "AppData", "LocalLow")]
+    for base in bases:
         if not base or not os.path.isdir(base):
             continue
         for child in _listdir(Path(base)):
@@ -291,17 +292,28 @@ def _sources(root: Path, depth: int = 4):
             lower = child.name.lower()
             if lower == "sentry":
                 yield "sentry", child
+            elif lower == "bugsnag":
+                yield "bugsnag", child
+            elif lower == "crashes" and folder.name.lower() == "saved":
+                yield "unreal", child
+            elif lower == "leveldb" and folder.name.lower() == "local storage":
+                yield "local-storage", child
             elif lower == ".sentry-native":
                 yield "sentry-native", child
             elif lower == "crashpad":
                 yield "crashpad", child
             elif lower in CRASH_DIRS:
                 yield "generic", child
-            elif level < depth and lower not in SKIP_DIRS and not _VERSIONISH.match(child.name):
+            elif level < depth and (lower not in SKIP_DIRS or lower == "local storage") and not _VERSIONISH.match(child.name):
                 stack.append((child, level + 1))
+        player_log = folder / "Player.log"
+        if player_log.is_file():
+            yield "unity", player_log
 
 
-READERS = {"sentry": read_sentry, "sentry-native": read_sentry_native, "crashpad": read_crashpad, "generic": read_generic}
+def _readers():
+    return {"sentry": read_sentry, "sentry-native": read_sentry_native, "crashpad": read_crashpad, "generic": read_generic,
+            "bugsnag": read_bugsnag, "unreal": read_unreal, "unity": read_unity_log, "local-storage": read_local_storage}
 
 
 def for_app(exes: list[str], name: str = "", publisher: str = "") -> dict:
@@ -315,11 +327,126 @@ def for_app(exes: list[str], name: str = "", publisher: str = "") -> dict:
                 continue
             seen.add(key)
             try:
-                source = READERS[kind](folder, budget)
+                source = _readers()[kind](folder, budget)
             except Exception as error:  # noqa: BLE001 - one odd folder must not hide the others
                 source = {"kind": kind, "path": str(folder), "title": "Unreadable", "error": f"{type(error).__name__}: {error}"}
             if source.get("kind") == "crash-folder" and not source.get("files_total"):
                 continue                                 # an empty crash folder says nothing
+            if source.get("kind") in ("unity", "local-storage", "bugsnag", "unreal") and not source.get("facts") \
+                    and not source.get("items"):
+                continue
             sources.append(source)
     return {"roots": [str(root) for root in roots], "sources": sources,
             "complete": time.time() < budget["deadline"] and budget["files"] <= MAX_FILES}
+
+
+# --- more sources (R1 survey): Bugsnag, Unreal crash reports, Unity logs, Local Storage IDs --------
+# These return a common shape: "facts" as [label, value, identifying], plus optional "items".
+
+UNREAL_FIELDS = [("GameName", "game", False), ("GameVersion", "version", False), ("EngineVersion", "engine", False),
+                 ("CrashType", "crash type", False), ("ErrorMessage", "error", False), ("UserName", "Windows user name", True),
+                 ("LoginId", "login ID", True), ("EpicAccountId", "Epic account ID", True), ("MachineId", "machine ID", True),
+                 ("Misc.CPUBrand", "processor", False), ("Misc.PrimaryGPUBrand", "graphics card", False),
+                 ("MemoryStats.TotalPhysicalGB", "memory (GB)", False), ("UserDescription", "your description", True)]
+
+
+def read_unreal(folder: Path, budget: dict) -> dict:
+    """Unreal Engine's crash reporter: each crash folder holds a CrashContext XML sent with the report."""
+    import xml.etree.ElementTree as ET
+
+    crashes = sorted((path for path in _listdir(folder) if path.is_dir()), key=lambda p: _stamp(p) or 0, reverse=True)
+    items, facts = [], []
+    for crash in crashes[:10]:
+        if not _spend(budget):
+            break
+        try:
+            props = ET.parse(crash / "CrashContext.runtime-xml").getroot().find("RuntimeProperties")
+        except (OSError, ET.ParseError):
+            continue
+        values = {tag: (props.findtext(tag) or "").strip() for tag, _, _ in UNREAL_FIELDS} if props is not None else {}
+        dump = next((p for p in _listdir(crash) if p.suffix.lower() == ".dmp"), None)
+        items.append({"name": crash.name, "modified": _stamp(crash), "size": dump.stat().st_size if dump else 0,
+                      "detail": values.get("ErrorMessage", "")[:200]})
+        if not facts:
+            facts = [[label, values.get(tag) or "", identifying] for tag, label, identifying in UNREAL_FIELDS if values.get(tag)]
+    return {"kind": "unreal", "path": str(folder), "title": "Unreal Engine crash reports",
+            "note": "Each crash folder is what the game's crash reporter sends: this description of the PC and you, and a memory dump.",
+            "facts": facts, "items": items, "total": len(crashes)}
+
+
+def read_bugsnag(folder: Path, budget: dict) -> dict:
+    """Bugsnag's Electron store: a device ID, and events and sessions waiting to be sent."""
+    facts, items, total = [], [], 0
+    for store in (path for path in _listdir(folder) if path.is_dir()):
+        device = _read_json(store / "device.json") or {}
+        for key, value in device.items():
+            if isinstance(value, (str, int, float)):
+                facts.append([f"device {key}", value, "id" in key.lower()])
+        for kind in ("events", "sessions"):
+            files = [path for path in _listdir(store / kind) if path.is_file()]
+            total += len(files)
+            for path in files[:10]:
+                if not _spend(budget):
+                    break
+                payload = _read_json(path)
+                fields = sorted(payload.keys())[:20] if isinstance(payload, dict) else []
+                items.append({"name": f"{kind}/{path.name}", "modified": _stamp(path), "size": path.stat().st_size,
+                              "detail": ", ".join(fields)})
+    return {"kind": "bugsnag", "path": str(folder), "title": "Bugsnag crash and error reporter",
+            "note": "Errors and sessions are stored here until they are sent, with this device ID.",
+            "facts": facts, "items": items, "total": total}
+
+
+UNITY_SDKS = {"GameAnalytics": "GameAnalytics", "UnityConnect": "Unity Analytics", "Unity Analytics": "Unity Analytics",
+              "Steamworks": "Steamworks", "Firebase": "Firebase", "Sentry": "Sentry", "Backtrace": "Backtrace",
+              "AppsFlyer": "AppsFlyer", "Adjust": "Adjust", "FacebookSdk": "Facebook SDK", "PlayFab": "PlayFab",
+              "EOSSDK": "Epic Online Services", "Amplitude": "Amplitude", "Mixpanel": "Mixpanel"}
+
+
+def read_unity_log(path: Path, budget: dict) -> dict:
+    """A Unity game's Player.log: which analytics and online services the game started, and how often they logged."""
+    _spend(budget)
+    try:
+        data = path.read_bytes()[-MAX_FILE * 2:]
+    except OSError:
+        data = b""
+    text = data.decode("utf-8", "replace")
+    counts: dict[str, int] = {}
+    for marker, name in UNITY_SDKS.items():
+        hits = text.count(marker)
+        if hits:
+            counts[name] = counts.get(name, 0) + hits
+    events = len(re.findall(r"Add(?:Design|Business|Progression|Resource|Error)Event", text))
+    facts = [[name, f"{hits} log lines", False] for name, hits in sorted(counts.items(), key=lambda item: -item[1])]
+    if events:
+        facts.append(["analytics events recorded in this log", events, False])
+    return {"kind": "unity", "path": str(path), "title": "Unity game log",
+            "note": "The game's own log. It shows which analytics and online services it started; the events go to those services.",
+            "facts": facts, "items": [], "total": events}
+
+
+STORAGE_KEYS = [(re.compile(rb"_dd_s"), "Datadog session"), (re.compile(rb"statsig\.[a-z_.]+"), "Statsig experiments"),
+                (re.compile(rb"ajs_(?:anonymous|user)_id"), "Segment ID"), (re.compile(rb"AMP_[A-Za-z0-9]{6,10}"), "Amplitude ID"),
+                (re.compile(rb"mp_[0-9a-f]{32}_mixpanel"), "Mixpanel ID"), (re.compile(rb"_ga(?:_[A-Z0-9]+)?\b"), "Google Analytics ID"),
+                (re.compile(rb"intercom-(?:id|session)-[a-z0-9]+"), "Intercom ID"),
+                (re.compile(rb"ph_phc_[A-Za-z0-9]+_posthog"), "PostHog ID"),
+                (re.compile(rb"ld:\$anonUserId|launchdarkly"), "LaunchDarkly"), (re.compile(rb"__sentry|sentryReplaySession"), "Sentry")]
+
+
+def read_local_storage(folder: Path, budget: dict) -> dict:
+    """Analytics IDs that web-based SDKs inside an Electron app keep in its Local Storage."""
+    found: dict[str, set[str]] = {}
+    for path in sorted(_listdir(folder))[:60]:
+        if path.suffix.lower() not in (".log", ".ldb") or not _spend(budget, cost=0.5):
+            continue
+        try:
+            data = path.read_bytes()[:MAX_FILE]
+        except OSError:
+            continue
+        for pattern, label in STORAGE_KEYS:
+            for match in pattern.finditer(data):
+                found.setdefault(label, set()).add(match.group(0).decode("latin-1"))
+    facts = [[label, ", ".join(sorted(keys)[:4]), False] for label, keys in sorted(found.items())]
+    return {"kind": "local-storage", "path": str(folder), "title": "IDs kept by web analytics inside the app",
+            "note": "Keys that analytics and experiment services store in the app's Local Storage; they identify this install to them.",
+            "facts": facts, "items": [], "total": len(found)}
