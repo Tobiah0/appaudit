@@ -18,6 +18,7 @@ and after a switch was applied gives a verdict.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 from collections import defaultdict
@@ -175,6 +176,50 @@ def now_verdict(state: str, mark: dict) -> dict:
     return {"verdict": "on_but_quiet", "text": "The setting is on, but nothing matching it was seen in this window."}
 
 
+def _expect_programs(expect: dict) -> set[str]:
+    names = set(_lower(expect.get("processes")))
+    names |= set(_lower((expect.get("senders") or {}).get("processes")))
+    names |= set(_lower((expect.get("reporting_from") or {}).get("processes")))
+    return names
+
+
+def _matches_expect(host: str, expect: dict) -> bool:
+    """Whether a request to `host` is the kind of traffic the switch should stop."""
+    from .naming import labels
+
+    domains = _lower(expect.get("domains"))
+    if domains and _suffix_match(host, domains):
+        return True
+    if expect.get("reporting_from") or expect.get("processes"):
+        return labels.for_name(host)["category"] in labels.REPORTING
+    return False
+
+
+def inspection_evidence(expect: dict, applied: float | None = None, listing=None, load_report=None) -> list[dict]:
+    """Inspections of the switch's programs, newest first, with how many requests matched what it
+    should stop. An inspection records every request the app made while it ran, so it is direct
+    evidence: after a switch, "0 of 68 requests" means the switch held during that run."""
+    from . import inspection
+
+    programs = _expect_programs(expect)
+    if not programs:
+        return []
+    listing = listing if listing is not None else inspection.listing()
+    load_report = load_report or inspection.report
+    found = []
+    for meta in listing:
+        if meta.get("status") != "done" or os.path.basename(meta.get("exe") or "").lower() not in programs:
+            continue
+        report = (load_report(meta["id"]) or {}).get("report") or {}
+        requests = report.get("requests") or []
+        matching = [item for item in requests if _matches_expect(item.get("host") or "", expect)]
+        found.append({"id": meta["id"], "started": meta["started"], "app": meta.get("app"), "requests": len(requests),
+                      "matching": len(matching), "hosts": sorted({item["host"] for item in matching})[:6],
+                      "after_change": applied is not None and meta["started"] >= applied,
+                      "verdict": "quiet" if requests and not matching else ("active" if matching else "empty")})
+    return sorted(found, key=lambda item: -item["started"])
+
+
 def upload_counters() -> dict | None:
     """Windows' own record of its telemetry uploads: a second witness for the telemetry service."""
     import winreg
@@ -219,6 +264,9 @@ def report(hours: float = 24, conn: sqlite3.Connection | None = None, backend=No
             item = {"id": switch.id, "title": switch.title, "group": switch.group, "state": state["state"],
                     "expect": switch.expect, "window": mark, **now_verdict(state["state"], mark)}
             entry = applied.get(switch.id)
+            inspections = inspection_evidence(switch.expect, entry["applied"] if entry else None)
+            if inspections:
+                item["inspections"] = inspections[:5]
             if entry:
                 changed = entry["applied"]
                 before = footprint(conn, switch.expect, changed - 24 * 3600, changed)

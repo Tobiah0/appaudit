@@ -50,10 +50,16 @@ async function loadProof() {
       el("div", { class: "sub", text: item.change.text }),
       el("div", { class: "sub", text: `Day before: ${footprintText(item.change.before)}` }),
       el("div", { class: "sub", text: `Since: ${footprintText(item.change.after)}` })) : null;
+    // Inspections run the app with its own network log: every request it made, so direct evidence.
+    const inspected = (item.inspections || []).map((run) => el("div", { class: "sub" },
+      el("strong", { text: run.verdict === "quiet" ? "Inspection: quiet" : run.verdict === "active" ? "Inspection: still active" : "Inspection: no requests" }),
+      ` on ${new Date(run.started * 1000).toLocaleString()}${run.after_change ? " (after the change)" : ""}: `
+      + `${run.matching} of ${run.requests} requests went to what this switch should stop`
+      + (run.hosts.length ? ` (${run.hosts.join(", ")})` : "") + "."));
     return el("div", { class: "row" },
       el("div", { class: "grow" }, el("div", { class: "name", text: item.title }),
         el("div", { class: "sub", text: item.group }), el("div", { text: footprintText(item.window) }),
-        el("div", { class: "sub", text: item.text }), change),
+        el("div", { class: "sub", text: item.text }), change, inspected),
       el("div", { style: "text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end" },
         verdictBadge(item.verdict), el("span", { class: "sub", text: `setting: ${item.state === "private" ? "off" : "on"}` })));
   });

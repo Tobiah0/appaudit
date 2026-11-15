@@ -179,3 +179,20 @@ def test_reporting_from_counts_only_reporting_destinations_and_ignores_separate_
     mark = proof.footprint(conn, expect, now - 5 * HOUR, now)
     assert mark["sent"] == 700 and mark["destinations"][0][0] == "mobile.events.data.microsoft.com"
     labels.for_name.cache_clear()
+
+
+def test_inspections_count_as_evidence_for_a_switch(monkeypatch):
+    from appaudit.naming import labels
+
+    monkeypatch.setattr(labels, "_blocklists", lambda: (set(), {}))
+    labels.for_name.cache_clear()
+    listing = [{"id": "a", "status": "done", "exe": r"C:\x\Code.exe", "app": "VS Code", "started": 2000.0},
+               {"id": "b", "status": "done", "exe": r"C:\x\Code.exe", "app": "VS Code", "started": 500.0},
+               {"id": "c", "status": "done", "exe": r"C:\x\other.exe", "app": "Other", "started": 2500.0}]
+    reports = {"a": [{"host": "marketplace.visualstudio.com"}],
+               "b": [{"host": "mobile.events.data.microsoft.com"}, {"host": "marketplace.visualstudio.com"}]}
+    found = proof.inspection_evidence({"reporting_from": {"processes": ["code.exe"]}}, applied=1000.0, listing=listing,
+                                      load_report=lambda run: {"report": {"requests": reports[run]}})
+    assert [(run["id"], run["verdict"], run["matching"], run["after_change"]) for run in found] == [
+        ("a", "quiet", 0, True), ("b", "active", 1, False)]
+    labels.for_name.cache_clear()

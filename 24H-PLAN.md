@@ -87,7 +87,7 @@ then depth.
       on this PC).
 - [x] 4.2 Inspection improvements from R2 (Firefox headers via MOZ_LOG if feasible).
 - [x] 4.3 Names from TLS ClientHello (R3) in the capture pipeline, with tests on recorded packets.
-- [ ] 4.4 Inspection results feed proof: an inspection after a switch counts as before/after
+- [x] 4.4 Inspection results feed proof: an inspection after a switch counts as before/after
       evidence for that switch.
 
 ## Phase 5: robustness and safety
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **4.4** (done): `proof.inspection_evidence` finds finished inspections of a switch's programs and counts requests that went to what the switch should stop (its domains, or reporting destinations for reporting_from rules), marking whether the run was after the change. Shown on the Proof page as "Inspection: quiet/still active". Real result: VS Code's telemetry switch (applied 18:46) has an inspection after the change: 0 of 68 requests went to reporting destinations. Checked in the browser. 202 tests.
 - **4.3** (done, not activated): `packets.HelloAssembler` joins the first segments of each TLS connection (Chrome's ~1,800-byte ClientHello puts the name in segment two) and skips Encrypted Client Hello cover names (counted as hidden). The helper gains `sample_tls()`: a 90 s window with Packet Monitor also passing TCP 443 at 2,048 bytes per packet, then the DNS-only filter is restored; helper command `tls_sample`; periodic windows off (`TLS_SAMPLE_EVERY = None`). Tested with synthetic frames (split hello, interleaved connections, ECH) and with Packet Monitor commands recorded, not run. Activating it needs a helper restart, which is elevated, so it waits for Tobiah. 201 tests.
 - **4.2** (done): Firefox-family programs (firefox, librewolf, waterfox, floorp, zen, thunderbird) are inspected with their own HTTP log (MOZ_LOG nsHttp:3): every request's address and headers, secrets replaced, no bodies; logs from all Firefox processes are read and then deleted. `mozlog.py` parses the request blocks; netlog's per-destination overview is shared. Parser checked on a fresh headless Firefox log (394 requests to 8 hosts in 12 s, incl. Mozilla's location lookup and remote settings). A real inspection of Tobiah's Firefox was not run: it is open (30 processes) and inspections never close a running app; the refusal was verified on the real process list. 196 tests.
 - **4.1** (done): new on-disk readers, found through the same folder matching (now also LocalLow for Unity games): Bugsnag store (device ID, waiting events/sessions), Unreal `Saved\Crashes` CrashContext (game, engine, error, and identifying login ID, Epic account ID, machine ID, Windows user name), Unity `Player.log` (analytics SDKs started and events logged), Electron Local Storage analytics IDs (Datadog, Statsig, Segment, Amplitude, Mixpanel, GA, Intercom, PostHog, LaunchDarkly, Sentry). Real files: Docker Desktop Bugsnag device ID; Witchfire's 2 crash reports carry login and Epic account IDs; RACCOIN logged 92 GameAnalytics events; Riot Client stores a Datadog session and Statsig experiments. Not seen in the browser because none of these apps ran this week (the view only lists active apps); checked through tests. 194 tests.
