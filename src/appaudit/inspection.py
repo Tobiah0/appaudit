@@ -32,6 +32,16 @@ FLAGS = ["--net-log-capture-mode=Everything", "--disable-quic"]
 NOT_MAIN = ("update", "updater", "squirrel", "crashpad", "crash", "helper", "uninstall", "setup", "installer", "elevate")
 CHROMIUM_MARKERS = ("chrome_100_percent.pak", "resources.pak", "v8_context_snapshot.bin", "libcef.dll", "icudtl.dat")
 DETACHED = 0x00000008 | 0x00000200          # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+# Firefox and its relatives log their HTTP requests (addresses and headers, no bodies) with MOZ_LOG.
+GECKO = {"firefox.exe", "librewolf.exe", "waterfox.exe", "floorp.exe", "zen.exe", "thunderbird.exe"}
+MOZ_STEM = "moz.log"
+
+
+def engine_of(exe: str) -> str | None:
+    """Which network log this program can write: "chromium", "firefox", or None."""
+    if Path(exe).name.lower() in GECKO:
+        return "firefox"
+    return "chromium" if chromium_based(exe) else None
 
 
 class Running(Exception):
@@ -83,9 +93,10 @@ def candidates(exes: list[str]) -> list[dict]:
         if not exe or os.path.normcase(exe).startswith(windows + os.sep) or not os.path.isfile(exe):
             continue
         stem = Path(exe).stem.lower()
+        engine = engine_of(exe)
         found.append({"exe": exe, "name": Path(exe).name, "main": not any(word in stem for word in NOT_MAIN),
-                      "chromium": chromium_based(exe), "running": running(exe)})
-    found.sort(key=lambda item: (not item["main"], not item["chromium"], item["name"].lower()))
+                      "chromium": engine == "chromium", "engine": engine, "running": running(exe)})
+    found.sort(key=lambda item: (not item["main"], item["engine"] is None, item["name"].lower()))
     return found
 
 
@@ -140,12 +151,18 @@ def start(actor_id: str, actor_name: str, exe: str) -> dict:
     inspection_id = uuid.uuid4().hex[:16]
     directory = folder() / inspection_id
     directory.mkdir(parents=True)
-    log = directory / "net.json"
-    process = subprocess.Popen([exe, f"--log-net-log={log}", *FLAGS], cwd=str(Path(exe).parent),
+    engine = engine_of(exe) or "chromium"
+    if engine == "firefox":
+        environment = dict(os.environ, MOZ_LOG="timestamp,nsHttp:3", MOZ_LOG_FILE=str(directory / MOZ_STEM))
+        arguments = [exe]
+    else:
+        environment = None
+        arguments = [exe, f"--log-net-log={directory / 'net.json'}", *FLAGS]
+    process = subprocess.Popen(arguments, cwd=str(Path(exe).parent), env=environment,
                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                creationflags=DETACHED, close_fds=True)
     meta = {"id": inspection_id, "actor": actor_id, "app": actor_name, "exe": exe, "pid": process.pid,
-            "started": time.time(), "ended": None, "status": "running", "chromium": chromium_based(exe)}
+            "started": time.time(), "ended": None, "status": "running", "chromium": engine == "chromium", "engine": engine}
     _save(meta)
     return meta
 
@@ -161,13 +178,21 @@ def status(inspection_id: str) -> dict:
     if meta["status"] != "running":
         return meta
     log = folder() / inspection_id / "net.json"
-    size = log.stat().st_size if log.exists() else 0
+    logs = _log_files(inspection_id, meta)
+    size = sum(path.stat().st_size for path in logs)
     if size >= STOP_BYTES:                       # protect the disk: end it now
         finish(inspection_id, close_app=True, reason="The log reached 4 GB, so the inspection was ended automatically.")
         return load(inspection_id)
     alive = bool(running(meta["exe"]))
     preview = None
-    if size and size <= PREVIEW_BYTES:
+    if size and size <= PREVIEW_BYTES and meta.get("engine") == "firefox":
+        try:
+            from . import mozlog
+
+            preview = len(mozlog.report_folder(folder() / inspection_id, MOZ_STEM)["requests"])
+        except OSError:
+            preview = None
+    elif size and size <= PREVIEW_BYTES:
         cached = _previews.get(inspection_id)
         if cached and cached[0] == size:
             preview = cached[1]
@@ -196,26 +221,39 @@ def finish(inspection_id: str, close_app: bool = True, reason: str | None = None
     return meta
 
 
-def _read(inspection_id: str) -> None:
-    from . import netlog
+def _log_files(inspection_id: str, meta: dict) -> list[Path]:
+    directory = folder() / inspection_id
+    if meta.get("engine") == "firefox":
+        return [path for path in directory.glob(f"{MOZ_STEM}*") if path.is_file()]
+    log = directory / "net.json"
+    return [log] if log.exists() else []
 
+
+def _read(inspection_id: str) -> None:
+    from . import mozlog, netlog
+
+    meta = load(inspection_id)
     log = folder() / inspection_id / "net.json"
     report_path = folder() / inspection_id / "report.json"
     time.sleep(1.5)                                  # let the closed app finish writing its log
     try:
-        result = netlog.report_file(log) if log.exists() and log.stat().st_size else {"requests": [], "hosts": [], "empty": True}
+        if meta.get("engine") == "firefox":
+            result = mozlog.report_folder(folder() / inspection_id, MOZ_STEM)
+        else:
+            result = netlog.report_file(log) if log.exists() and log.stat().st_size else {"requests": [], "hosts": [], "empty": True}
     except (OSError, ValueError, MemoryError) as error:
         result = {"requests": [], "hosts": [], "error": f"The log could not be read: {type(error).__name__}: {error}"}
     report_path.write_text(json.dumps(result), encoding="utf-8")
     for _attempt in range(20):                       # it holds cookies and sign-in tokens: it must go
         try:
-            log.unlink(missing_ok=True)
+            for path in _log_files(inspection_id, meta):
+                path.unlink(missing_ok=True)
             break
         except OSError:
             time.sleep(0.5)
     meta = load(inspection_id)
     meta.update(status="done", requests=len(result["requests"]), hosts=len(result["hosts"]),
-                raw_log_deleted=not log.exists())
+                raw_log_deleted=not _log_files(inspection_id, meta))
     _save(meta)
 
 

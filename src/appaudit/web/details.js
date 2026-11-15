@@ -384,7 +384,7 @@ function inspectSection(actor) {
     return card;
   }
   card.append(el("div", { class: "sub", text: "Runs the app with its own network log switched on, so you can see every request it makes while you use it, "
-    + "with what is inside. Works for apps built on Chromium or Electron. Nothing is intercepted: the app writes the log itself, for this run only. "
+    + "with what is inside. Works for apps built on Chromium or Electron, and for Firefox (addresses and headers). Nothing is intercepted: the app writes the log itself, for this run only. "
     + "The log holds cookies and sign-in tokens, so it is deleted once it has been read; what is kept has secrets replaced." }));
   const message = inspectState.message.get(actor.id);
   if (message) card.append(el("div", { class: "notice", text: message }));
@@ -410,15 +410,17 @@ function inspectSection(actor) {
   const choice = inspectState.choice.get(actor.id) || data.programs[0].exe;
   const program = data.programs.find((p) => p.exe === choice) || data.programs[0];
   const select = el("select", {}, data.programs.map((p) => {
-    const option = el("option", { value: p.exe, text: `${p.name}${p.main ? "" : " (helper)"}${p.chromium ? "" : " (not Chromium)"}` });
+    const option = el("option", { value: p.exe, text: `${p.name}${p.main ? "" : " (helper)"}${p.engine ? "" : " (no network log)"}` });
     if (p.exe === program.exe) option.selected = true;
     return option;
   }));
   select.addEventListener("click", (event) => event.stopPropagation());
   select.addEventListener("change", () => { inspectState.choice.set(actor.id, select.value); renderLive(); });
   const controls = [data.programs.length > 1 ? select : el("span", { class: "mono", text: program.name })];
-  if (!program.chromium) card.append(el("div", { class: "warn", text: "This program does not look like it is built on Chromium, so it probably cannot write "
-    + "a network log (Firefox, most games and native apps cannot). You can still try." }));
+  if (program.engine === "firefox") card.append(el("div", { class: "sub", text: "Firefox writes its own HTTP log: every address it contacts "
+    + "and the headers it sends. Its log does not hold request bodies." }));
+  else if (!program.engine) card.append(el("div", { class: "warn", text: "This program is not built on Chromium or Firefox, so it probably cannot write "
+    + "a network log (most games and native apps cannot). You can still try." }));
   if (program.running.length) {
     card.append(el("div", { class: "warn", text: `${program.name} is running (${plural(program.running.length, "process", "processes")}). `
       + "It has to be closed first, so it can be started again with its log on. Close it yourself, or let this tool close it "

@@ -111,3 +111,26 @@ def test_candidates_put_the_main_chromium_program_first(tmp_path):
     found = inspection.candidates([str(update), str(main), r"C:\Windows\System32\svchost.exe"])
     assert [item["name"] for item in found] == ["Chat.exe", "Update.exe"]
     assert found[0]["main"] and found[0]["chromium"] and not found[1]["main"]
+
+
+def test_firefox_log_requests_are_read_with_their_headers(tmp_path):
+    from appaudit import mozlog
+
+    prefix = "2026-11-15 05:49:12.427000 UTC - [Parent 1: Main Thread]: E/nsHttp "
+    lines = [prefix + "nsHttpTransaction::Init", prefix + "http request [", prefix + "  POST /submit/telemetry/abc HTTP/1.1",
+             prefix + "  Host: incoming.telemetry.mozilla.org", prefix + "  Cookie: session=secretvalue123",
+             prefix + "  ", prefix + "]"]
+    (tmp_path / "moz.log.moz_log").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (tmp_path / "moz.log.child-1.moz_log").write_text("", encoding="utf-8")
+    report = mozlog.report_folder(tmp_path)
+    [request] = report["requests"]
+    assert request["url"] == "https://incoming.telemetry.mozilla.org/submit/telemetry/abc" and request["method"] == "POST"
+    assert "secretvalue123" not in request["request_headers"]
+    assert report["hosts"][0]["host"] == "incoming.telemetry.mozilla.org"
+
+
+def test_firefox_programs_use_the_firefox_log(tmp_path):
+    exe = tmp_path / "firefox.exe"
+    exe.write_bytes(b"MZ")
+    assert inspection.engine_of(str(exe)) == "firefox"
+    assert inspection.candidates([str(exe)])[0]["engine"] == "firefox"

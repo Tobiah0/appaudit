@@ -343,7 +343,11 @@ def report_file(path) -> dict:
 
 
 def report_from(log: dict) -> dict:
-    requests = requests_in(log)
+    return {**overview(requests_in(log)), "capture_mode": (log.get("constants") or {}).get("logCaptureMode")}
+
+
+def overview(requests: list[dict]) -> dict:
+    """Requests plus a summary per destination; shared by the Chromium and Firefox readers."""
     hosts: dict[str, dict] = {}
     for item in requests:
         entry = hosts.setdefault(item["host"], {"host": item["host"], "requests": 0, "sent": 0, "with_body": 0,
@@ -355,7 +359,7 @@ def report_from(log: dict) -> dict:
         entry["identifying"] |= set((summary.get("identifying") or {}).keys())
         for name, count in summary.get("event_names") or []:
             entry["event_names"][name] += count
-    overview = [{**entry, "identifying": sorted(entry["identifying"])[:30], "event_names": entry["event_names"].most_common(25)}
+    summary = [{**entry, "identifying": sorted(entry["identifying"])[:30], "event_names": entry["event_names"].most_common(25)}
                 for entry in hosts.values()]
-    overview.sort(key=lambda entry: -entry["sent"])
-    return {"requests": requests, "hosts": overview, "capture_mode": (log.get("constants") or {}).get("logCaptureMode")}
+    summary.sort(key=lambda entry: (-entry["sent"], -entry["requests"]))
+    return {"requests": requests, "hosts": summary}
