@@ -90,11 +90,19 @@ function programsView(programs) {
 }
 
 function payloadView(item) {
+  const summary = item.summary || {};
+  const identifying = Object.entries(summary.identifying || {});
+  const key = `payload|${item.at}|${item.url}`;
   return el("div", { class: "row" }, el("div", { class: "grow" },
     el("div", { class: "mono", text: `${item.method || ""} ${item.url || item.host}` }),
-    el("div", { class: "sub", text: `${item.program} · ${new Date(item.at * 1000).toLocaleString()} · body ${bytes(item.body_size || 0)}` }),
-    item.request_headers ? el("pre", { class: "plan", text: item.request_headers }) : null,
-    item.body ? el("pre", { class: "plan", text: item.body }) : null));
+    el("div", { class: "sub", text: `${item.program} · ${new Date(item.at * 1000).toLocaleString()} · body ${bytes(item.body_size || 0)}`
+      + (summary.records ? ` · ${plural(summary.records, "record")}` : "") }),
+    summary.event_names && summary.event_names.length ? el("div", {}, el("strong", { text: "Events in it: " }),
+      summary.event_names.map(([name, count]) => el("span", { class: "chip tag", text: count > 1 ? `${name} ×${count}` : name }))) : null,
+    identifying.length ? el("div", {}, el("strong", { text: "Fields that identify you or this PC" }),
+      kv(identifying.map(([field, value]) => [field, secret(value)]))) : null,
+    item.request_headers ? fold(`${key}|h`, "Request headers", el("pre", { class: "plan", text: item.request_headers })) : null,
+    item.body ? fold(`${key}|b`, "The body as recorded (first 4,000 characters)", el("pre", { class: "plan", text: item.body })) : null));
 }
 
 // --- what the app keeps on disk to send ----------------------------------------------------------

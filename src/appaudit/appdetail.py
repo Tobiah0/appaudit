@@ -172,9 +172,13 @@ def _programs(procs) -> list[dict]:
 
 
 def _payload(row, procs) -> dict:
+    from . import netlog
+
+    body = row["body"] or ""
     return {"program": procs[row["proc_id"]]["name"], "host": row["host"], "method": row["method"], "url": row["url"],
             "at": row["at"], "request_headers": row["request_headers"], "response_headers": row["response_headers"],
-            "body": row["body"], "body_size": row["body_size"]}
+            "body": body, "body_size": row["body_size"],
+            "summary": netlog.summarise(body) if body and not body.startswith("[") else None}
 
 
 def _history(exes: list[str]) -> list[dict]:

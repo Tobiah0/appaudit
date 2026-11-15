@@ -28,6 +28,10 @@ one-time download of public reference lists, and it appears in its own results.
 
 Opening an app on the Activity page also shows:
 
+- **Turn off its reporting**: the switches that concern this app (settings, policies, config files, steps), each with the exact change shown before it is made.
+- **What it keeps on disk to send**: read from the app's own folders. Crash reporters' state (Sentry: the user record, device description and recent-activity log attached to error reports, plus reports waiting to be sent), Crashpad crash dumps and whether they are uploaded. Identifying values are hidden until clicked.
+- **Inspect this app**: for apps built on Chromium or Electron, starts the app with its own network log switched on, then shows every request it made with its content: event names, fields that identify you, headers and body. The raw log is deleted once read.
+- **Everything recorded**: all destinations, an hourly timeline, request addresses, DNS lookups, programs and how they started, the 60-day Windows history and the inventory record, in collapsed sections.
 - **Built into this app**: reporting components (Sentry, Datadog, Segment and about 30 others) found by reading the app's own files. This shows what the app is built to do, not what it sent.
 - **What a message looks like**: select a destination to see a real captured request, when "Request content" is switched on, or an illustration built from the vendor's published format. The two are labelled differently.
 - **Request content** (off by default, button at the top): records headers and the start of the body for requests made through Windows' own web library. Cookies, tokens and passwords are replaced before saving.
@@ -66,8 +70,8 @@ dashboard (your user)  reads the helper's database; app inventory; switch catalo
   and requires a session token for anything that changes the PC.
 - Every change is journaled with the previous value and can be undone. Network blocks are ordinary
   Windows Firewall rules in the group "App Audit".
-- Request addresses are stored without their query strings. Request headers and bodies are not
-  collected.
+- Request addresses are stored without their query strings. Request headers and bodies are only
+  recorded when you switch on Request content or run an inspection, with secrets replaced.
 
 ## Limits
 
