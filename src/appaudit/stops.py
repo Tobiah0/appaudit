@@ -271,6 +271,8 @@ def remove(entry_id: int, backend, file: Path | None = None) -> dict:
             raise KeyError(f"no stop {entry_id}")
         if row["removed"] is None:
             if row["kind"] == "address":
+                if not str(row["rule"] or "").startswith(RULE_PREFIX):
+                    raise Refused("that rule was not made by App Audit")      # the record is user-writable
                 backend.rule_remove(row["rule"])
             conn.execute("UPDATE stops SET removed = ? WHERE id = ?", (time.time(), entry_id))
             if row["kind"] == "name":

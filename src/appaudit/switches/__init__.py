@@ -462,10 +462,22 @@ def apply(switch: Switch, backend=None, journal_file: Path | None = None, only_a
             change["after_sha"] = _sha(backend.file_read(change["file"]))
     entry_id = None
     if done:
-        with _journal(journal_file) as conn:
-            entry_id = conn.execute(
-                "INSERT INTO switch_journal (switch_id, applied, backend, changes) VALUES (?,?,?,?)",
-                (switch.id, time.time(), backend.name, json.dumps(done, default=str))).lastrowid
+        record = (switch.id, time.time(), backend.name, json.dumps(done, default=str))
+        if only_admin and journal_file is None:
+            # Administrator changes: the authoritative record is the helper's protected copy; the
+            # user's journal gets a copy with the same id, for display only.
+            from .. import protected
+
+            with _journal(protected.journal_file()) as conn:
+                entry_id = conn.execute("INSERT INTO switch_journal (switch_id, applied, backend, changes) VALUES (?,?,?,?)",
+                                        record).lastrowid
+            with _journal(None) as conn:
+                conn.execute("INSERT OR REPLACE INTO switch_journal (id, switch_id, applied, backend, changes) VALUES (?,?,?,?,?)",
+                             (entry_id, *record))
+        else:
+            with _journal(journal_file) as conn:
+                entry_id = conn.execute("INSERT INTO switch_journal (switch_id, applied, backend, changes) VALUES (?,?,?,?)",
+                                        record).lastrowid
     return {"switch": switch.id, "changed": done, "failed": failed, "journal_id": entry_id}
 
 
@@ -477,10 +489,15 @@ def undo(entry_id: int, backend=None, journal_file: Path | None = None, only_adm
     other changes survive.
     """
     backend = backend or RealBackend()
-    with _journal(journal_file) as conn:
+    source = journal_file
+    if only_admin and journal_file is None:
+        from .. import protected
+
+        source = protected.journal_file()           # never the user-writable copy for administrator changes
+    with _journal(source) as conn:
         row = conn.execute("SELECT * FROM switch_journal WHERE id = ?", (entry_id,)).fetchone()
     if row is None:
-        raise KeyError(f"no journal entry {entry_id}")
+        raise KeyError(f"no journal entry {entry_id}" + (" in the protected record" if source is not journal_file else ""))
     changes = json.loads(row["changes"])
     switch = load_catalogue().get(row["switch_id"])
     # A switch generated from the inventory can leave the catalogue; its user-level changes are undone
@@ -512,6 +529,7 @@ def undo(entry_id: int, backend=None, journal_file: Path | None = None, only_adm
         except Exception as error:  # noqa: BLE001
             failed.append({**change, "error": f"{type(error).__name__}: {error}"})
     if not failed:
-        with _journal(journal_file) as conn:
-            conn.execute("UPDATE switch_journal SET undone = ? WHERE id = ?", (time.time(), entry_id))
+        for target in {source, journal_file} if source is not journal_file else {journal_file}:
+            with _journal(target) as conn:
+                conn.execute("UPDATE switch_journal SET undone = ? WHERE id = ?", (time.time(), entry_id))
     return {"switch": row["switch_id"], "restored": restored, "failed": failed}

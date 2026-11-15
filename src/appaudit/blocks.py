@@ -138,6 +138,9 @@ def remove(entry_id: int, firewall=None, file: Path | None = None) -> dict:
         row = conn.execute("SELECT * FROM blocks WHERE id = ? AND backend = ?", (entry_id, firewall.name)).fetchone()
         if row is None:
             raise KeyError(f"no block {entry_id}")
+        if not str(row["rule"]).startswith(PREFIX):
+            # The record sits in a user-writable file; the helper only ever removes its own rules.
+            raise ValueError("that rule was not made by App Audit")
         if firewall.exists(row["rule"]):
             firewall.remove(row["rule"])
         conn.execute("UPDATE blocks SET removed = ? WHERE id = ?", (time.time(), entry_id))

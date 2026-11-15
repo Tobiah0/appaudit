@@ -92,7 +92,7 @@ then depth.
 
 ## Phase 5: robustness and safety
 
-- [ ] 5.1 Undo journal: values written as administrator must not come from a file the user's
+- [x] 5.1 Undo journal: values written as administrator must not come from a file the user's
       programs can edit (sign or keep a copy on the helper's side); tests.
 - [ ] 5.2 Pipe: the helper accepts commands only from the dashboard (check the client process
       and a shared secret); tests.
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **5.1** (done; real lock-down untested): administrator switch changes are journaled first in `%ProgramData%\AppAudit\journal.db`, a folder the helper creates and locks to SYSTEM and Administrators (users read only; owner reset to Administrators; fails closed if that cannot be done). The user's journal gets a display copy with the same id. Administrator undo reads only the protected record, so editing the user copy cannot change what the helper writes. The helper also refuses to remove firewall rules whose names are not App Audit's own (blocks and stops). Tests: tampered user copy is ignored on undo; unknown protected entries refused; foreign rule names refused; protected folder refused without admin. The ACL code itself needs an elevated run and has not been executed. 206 tests.
 - **4.4** (done): `proof.inspection_evidence` finds finished inspections of a switch's programs and counts requests that went to what the switch should stop (its domains, or reporting destinations for reporting_from rules), marking whether the run was after the change. Shown on the Proof page as "Inspection: quiet/still active". Real result: VS Code's telemetry switch (applied 18:46) has an inspection after the change: 0 of 68 requests went to reporting destinations. Checked in the browser. 202 tests.
 - **4.3** (done, not activated): `packets.HelloAssembler` joins the first segments of each TLS connection (Chrome's ~1,800-byte ClientHello puts the name in segment two) and skips Encrypted Client Hello cover names (counted as hidden). The helper gains `sample_tls()`: a 90 s window with Packet Monitor also passing TCP 443 at 2,048 bytes per packet, then the DNS-only filter is restored; helper command `tls_sample`; periodic windows off (`TLS_SAMPLE_EVERY = None`). Tested with synthetic frames (split hello, interleaved connections, ECH) and with Packet Monitor commands recorded, not run. Activating it needs a helper restart, which is elevated, so it waits for Tobiah. 201 tests.
 - **4.2** (done): Firefox-family programs (firefox, librewolf, waterfox, floorp, zen, thunderbird) are inspected with their own HTTP log (MOZ_LOG nsHttp:3): every request's address and headers, secrets replaced, no bodies; logs from all Firefox processes are read and then deleted. `mozlog.py` parses the request blocks; netlog's per-destination overview is shared. Parser checked on a fresh headless Firefox log (394 requests to 8 hosts in 12 s, incl. Mozilla's location lookup and remote settings). A real inspection of Tobiah's Firefox was not run: it is open (30 processes) and inspections never close a running app; the refusal was verified on the real process list. 196 tests.
