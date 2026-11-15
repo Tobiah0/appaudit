@@ -39,3 +39,14 @@
 - reason: Spotify's client API (playback and playlists)
   source: https://discourse.pi-hole.net/t/commonly-whitelisted-domains/212
   suffixes: [spclient.wg.spotify.com, apresolve.spotify.com]
+
+# Programs that are never stopped or blocked, whatever share of their traffic is reporting.
+# Security software reports detections and health by design; Windows' core hosts run many things.
+- reason: Security software (Microsoft Defender); App Audit does not interfere with it
+  source: project rule
+  programs: [msmpeng.exe, mpdefendercoreservice.exe, nissrv.exe, mpcmdrun.exe, securityhealthservice.exe,
+             securityhealthsystray.exe, smartscreen.exe, mssense.exe]
+- reason: A core Windows host that runs many unrelated services
+  source: project rule
+  programs: [svchost.exe, services.exe, lsass.exe, csrss.exe, wininit.exe, winlogon.exe, explorer.exe, system,
+             taskhostw.exe, dllhost.exe, rundll32.exe, conhost.exe, runtimebroker.exe, sihost.exe]

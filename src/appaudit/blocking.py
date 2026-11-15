@@ -33,7 +33,18 @@ def _matches(name: str, suffix: str) -> bool:
 @lru_cache(maxsize=1)
 def _never() -> list[tuple[str, str, str]]:
     entries = yaml.safe_load(KNOWLEDGE.read_text(encoding="utf-8")) or []
-    return [(suffix.lower(), entry["reason"], entry.get("source", "")) for entry in entries for suffix in entry["suffixes"]]
+    return [(suffix.lower(), entry["reason"], entry.get("source", "")) for entry in entries for suffix in entry.get("suffixes") or []]
+
+
+@lru_cache(maxsize=1)
+def _never_programs() -> dict[str, str]:
+    entries = yaml.safe_load(KNOWLEDGE.read_text(encoding="utf-8")) or []
+    return {program.lower(): entry["reason"] for entry in entries for program in entry.get("programs") or []}
+
+
+def never_stop(program: str | None) -> str | None:
+    """Why this program must never be stopped or blocked, or None."""
+    return _never_programs().get((program or "").lower())
 
 
 def never_block(name: str | None) -> dict | None:
