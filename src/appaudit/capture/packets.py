@@ -110,8 +110,11 @@ def dns_answers(message: bytes) -> tuple[str, list[str]] | None:
     return (name, addresses) if name and addresses else None
 
 
-def tls_server_name(payload: bytes) -> str | None:
-    """Server name from a TLS ClientHello, if this payload starts one."""
+ECH_EXTENSION = 0xFE0D          # Encrypted Client Hello: the server name sent is only an outer cover name
+
+
+def client_hello(payload: bytes) -> dict | None:
+    """Server name and whether Encrypted Client Hello hides the real one, from a whole ClientHello."""
     try:
         if payload[0] != 0x16 or payload[5] != 0x01:
             return None
@@ -121,17 +124,66 @@ def tls_server_name(payload: bytes) -> str | None:
         offset += 1 + payload[offset]                                   # compression methods
         end = offset + 2 + struct.unpack_from(">H", payload, offset)[0]
         offset += 2
+        name, ech = None, False
         while offset + 4 <= min(end, len(payload)):
             kind, length = struct.unpack_from(">HH", payload, offset)
             offset += 4
             if kind == 0:
                 name_length = struct.unpack_from(">H", payload, offset + 3)[0]
-                name = payload[offset + 5:offset + 5 + name_length]
-                return name.decode("ascii").lower() if len(name) == name_length else None
+                raw = payload[offset + 5:offset + 5 + name_length]
+                name = raw.decode("ascii").lower() if len(raw) == name_length else None
+            elif kind == ECH_EXTENSION:
+                ech = True
             offset += length
+        return {"name": name, "ech": ech} if name else None
     except (IndexError, struct.error, UnicodeDecodeError):
         return None
-    return None
+
+
+def tls_server_name(payload: bytes) -> str | None:
+    """Server name from a TLS ClientHello, if this payload starts one and the name is real (not ECH's cover)."""
+    hello = client_hello(payload)
+    return hello["name"] if hello and not hello["ech"] else None
+
+
+class HelloAssembler:
+    """Joins the first segments of a TLS connection: a modern ClientHello (Chrome with post-quantum
+    key shares) is about 1,800 bytes, so its server name can be in the second TCP segment."""
+
+    MAX_PENDING = 500
+    MAX_AGE = 10.0
+    MAX_SEGMENTS = 3
+
+    def __init__(self) -> None:
+        self._pending: dict[tuple, tuple[float, bytearray, int]] = {}
+        self.hidden = 0                  # connections whose real name Encrypted Client Hello hid
+
+    def feed(self, part: Segment, now: float) -> str | None:
+        key = (part.src, part.sport, part.dst, part.dport)
+        pending = self._pending.pop(key, None)
+        if pending is None:
+            if len(part.payload) < 6 or part.payload[0] != 0x16 or part.payload[5] != 0x01:
+                return None
+            data, count = bytearray(part.payload), 1
+        else:
+            if now - pending[0] > self.MAX_AGE:
+                return None
+            data, count = pending[1] + part.payload, pending[2] + 1
+        need = 5 + int.from_bytes(data[3:5], "big")
+        if len(data) >= need or count >= self.MAX_SEGMENTS:
+            hello = client_hello(bytes(data[:need]))
+            if hello and hello["ech"]:
+                self.hidden += 1
+                return None
+            return hello["name"] if hello else None
+        if len(self._pending) >= self.MAX_PENDING:                       # drop the oldest
+            oldest = min(self._pending, key=lambda item: self._pending[item][0])
+            del self._pending[oldest]
+        self._pending[key] = (now, data, count)
+        return None
+
+
+ASSEMBLER = HelloAssembler()
 
 
 def names_from_frame(frame: bytes) -> tuple[str, list[str], str] | None:
@@ -143,8 +195,10 @@ def names_from_frame(frame: bytes) -> tuple[str, list[str], str] | None:
         message = part.payload[2:] if part.proto == 6 else part.payload
         answer = dns_answers(message)
         return (answer[0], answer[1], "packet") if answer else None
-    if part.proto == 6 and part.dport == 443:
-        name = tls_server_name(part.payload)
+    if part.proto == 6 and part.dport == 443 and part.payload:
+        import time
+
+        name = ASSEMBLER.feed(part, time.time())
         if name:
             return name, [part.dst], "sni"
     return None

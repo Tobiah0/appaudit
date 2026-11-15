@@ -14,6 +14,7 @@ class Commands:
             "status": self._status,
             "stop": self._stop,
             "packets": self._packets,
+            "tls_sample": lambda request: {"tls": self.capture.sample_tls(min(float(request.get("seconds", 90)), 300))},
             "content": lambda request: {"content": self.capture.set_content(bool(request.get("on")))},
             "content_clear": lambda _request: {"removed": self.capture.clear_content()},
             "switch_apply": self._switch_apply,

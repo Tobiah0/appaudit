@@ -31,6 +31,9 @@ WEBIO_URLS = PROVIDERS[3]
 WEBIO_CONTENT = etw.Provider(etw.WEBIO, keywords=0x4000000000 | 0x20000000000, level=5)
 PACKET_PROVIDER = etw.Provider(etw.PKTMON, keywords=0x10, level=5)
 PACKET_FILTER = "AppAuditDns"
+TLS_SAMPLE_SECONDS = 90
+TLS_PACKET_SIZE = 2048                # enough for a whole ClientHello in one or two segments
+TLS_SAMPLE_EVERY = None               # seconds between windows; off until Tobiah turns it on
 
 
 def local_addresses() -> set[str]:
@@ -103,6 +106,43 @@ class Capture:
         _run(["pktmon", "filter", "remove"])
         self.packets_on = False
         self.packet_note = "off"
+
+    # -- server names from TLS handshakes: short sampling windows (BLOCKING-RESEARCH.md, R3) -------
+    # Capturing every HTTPS packet all the time is too heavy. For a short window, Packet Monitor
+    # also passes TCP port 443 at a size that holds a whole ClientHello; the server names read from
+    # them name addresses that DNS did not. Then the DNS-only filter comes back.
+
+    def _pktmon_start(self, size: int, with_tls: bool) -> str:
+        _run(["pktmon", "filter", "add", PACKET_FILTER, "-p", "53"])
+        if with_tls:
+            _run(["pktmon", "filter", "add", PACKET_FILTER + " TLS", "-t", "TCP", "-p", "443"])
+        log = livestore.path().with_name("pktmon.etl")
+        return _run(["pktmon", "start", "--capture", "--comp", "nics", "--pkt-size", str(size),
+                     "--file-name", str(log), "--file-size", "16" if with_tls else "4", "--log-mode", "circular"])
+
+    def sample_tls(self, seconds: float = TLS_SAMPLE_SECONDS) -> str:
+        """Widen the packet filter to TLS handshakes for `seconds`, then restore it."""
+        if not self.packets_on:
+            return "packets are off"
+        if getattr(self, "_sampling", False):
+            return "already sampling"
+        self._sampling = True
+        _run(["pktmon", "stop"])
+        _run(["pktmon", "filter", "remove"])
+        self._pktmon_start(TLS_PACKET_SIZE, with_tls=True)
+        self.packet_note = "reading DNS packets and TLS server names (sampling)"
+
+        def restore() -> None:
+            _run(["pktmon", "stop"])
+            _run(["pktmon", "filter", "remove"])
+            self._pktmon_start(512, with_tls=False)
+            self.packet_note = "reading DNS packets"
+            self._sampling = False
+
+        timer = threading.Timer(seconds, restore)
+        timer.daemon = True
+        timer.start()
+        return f"sampling TLS server names for {int(seconds)} seconds"
 
     # -- request content (off unless the person at the PC switches it on) ---------------
 
