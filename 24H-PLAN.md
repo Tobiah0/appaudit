@@ -41,7 +41,7 @@ then depth.
 
 ## Phase 1: accuracy (the critique's open items)
 
-- [ ] 1.1 Knowledge fixes: `spclient.wg.spotify.com` is Spotify's API, `lcs-*.adobe.io` is Adobe
+- [x] 1.1 Knowledge fixes: `spclient.wg.spotify.com` is Spotify's API, `lcs-*.adobe.io` is Adobe
       licensing, `docs.*`/documentation hosts are not reporting. Add `blockable: yes|no|careful`
       and reasons to domains.yaml; a test that every reporting entry has the field.
 - [ ] 1.2 Browsers: traffic from browsers to trackers is "websites you visit", shown apart from
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **1.1** (done): Spotify `spclient` moved to its main API (blockable no); Adobe licensing and Genuine hosts in their own entry (no); Firefox Remote Settings is security (no); Meta split into tracking pixel vs Facebook/Instagram themselves; Intel no longer telemetry; documentation sites and analytics vendors' own websites are not reporting. Every reporting entry has `blockable` yes/careful (7 careful, with what breaks). On the real capture, 24h reporting total went from 21.1 to 18.0 MB; Spotify's 3 MB is no longer counted. Note: 3.4 MB of VS Code telemetry in the capture came from Claude's blank-profile test. 132 tests.
 - **R3** (done): measured 92% of TCP 443 bytes and 77% of QUIC bytes unnamed. The ClientHello parser exists but the Packet Monitor filter is DNS-only. Capturing all of port 443 is too heavy; chose short sampling windows with two-segment reassembly for 4.3, QUIC later, ECH labelled. Activation needs a helper restart, so it waits for Tobiah.
 - **R2** (done): Firefox HTTP logging (MOZ_LOG) gives addresses and headers, no bodies; tested headless with a temporary profile. Firefox uses encrypted DNS via Cloudflare here, explaining unnamed Firefox traffic. Node.js requests in Electron apps are reachable only where the NodeOptions fuse is on (VS Code, Discord; not Claude), by an opt-in in-app logger. Written up in BLOCKING-RESEARCH.md; 4.2 will add Firefox headers.
 - **R1** (done): web docs were thin, so the dev PC was surveyed. New sources for 4.1: Bugsnag folders (Docker Desktop), Unreal `Saved\Crashes` with CrashContext XML (4 games), Unity `Player.log` with analytics SDK lines (RACCOIN: 717 GameAnalytics lines), analytics IDs in Electron Local Storage (Riot: Datadog, Statsig). Table added to BLOCKING-RESEARCH.md.

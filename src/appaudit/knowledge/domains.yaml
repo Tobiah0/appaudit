@@ -7,6 +7,7 @@
 - company: Microsoft
   category: telemetry
   purpose: Windows diagnostic data upload (Connected User Experiences and Telemetry)
+  blockable: "careful"
   breaks: Diagnostic and usage data is not sent to Microsoft. Update-failure reports are not sent either.
   suffixes: [v10.events.data.microsoft.com, v10c.events.data.microsoft.com, v10.vortex-win.data.microsoft.com,
              v20.events.data.microsoft.com, self.events.data.microsoft.com, functional.events.data.microsoft.com,
@@ -16,6 +17,7 @@
 - company: Microsoft
   category: telemetry
   purpose: Windows Error Reporting and crash analysis
+  blockable: "yes"
   breaks: Crash and error reports are not sent to Microsoft.
   suffixes: [watson.telemetry.microsoft.com, watson.microsoft.com, umwatsonc.events.data.microsoft.com,
              kmwatsonc.events.data.microsoft.com, oca.telemetry.microsoft.com, oca.microsoft.com,
@@ -23,17 +25,21 @@
 - company: Microsoft
   category: telemetry
   purpose: Remote configuration of what Windows collects (OneSettings)
+  blockable: "careful"
   breaks: Windows stops receiving new diagnostic settings; it keeps the last ones it downloaded.
   suffixes: [settings-win.data.microsoft.com, settings.data.microsoft.com]
 - company: Microsoft
   category: telemetry
   purpose: Office and Microsoft 365 usage and diagnostic data
+  blockable: "careful"
+  breaks: Includes configuration and experiment settings that Office, Teams and Edge read; some features may change.
   suffixes: [ecs.office.com, nexus.officeapps.live.com, nexusrules.officeapps.live.com, config.office.com,
              officeclient.microsoft.com, ecs.nel.measure.office.net, config.edge.skype.com,
              teams.events.data.microsoft.com, telemetry.urs.microsoft.com]
 - company: Microsoft
   category: telemetry
   purpose: Visual Studio and VS Code usage data
+  blockable: "yes"
   suffixes: [dc.services.visualstudio.com, vortex.data.msn.com, dc.applicationinsights.azure.com,
              applicationinsights.azure.com, visualstudio-devdiv-c2s.msedge.net, vscode-sync.trafficmanager.net,
              default.exp-tas.com]
@@ -76,6 +82,7 @@
 - company: Microsoft
   category: advertising
   purpose: Windows Spotlight, suggested content, tips and MSN feed
+  blockable: "careful"
   breaks: Lock-screen images, suggested apps and tips are not downloaded.
   suffixes: [arc.msn.com, ris.api.iris.microsoft.com, fd.api.iris.microsoft.com, api.msn.com, assets.msn.com,
              ntp.msn.com, srtb.msn.com, c.msn.com, www.msn.com, staticview.msn.com, iris.microsoft.com,
@@ -130,12 +137,14 @@
 - company: Google
   category: telemetry
   purpose: Google Analytics, Firebase and crash reporting
+  blockable: "yes"
   suffixes: [google-analytics.com, analytics.google.com, app-measurement.com, firebaseinstallations.googleapis.com,
              firebaselogging-pa.googleapis.com, crashlytics.com, firebase-settings.crashlytics.com,
              clientservices.googleapis.com, play.googleapis.com]
 - company: Google
   category: advertising
   purpose: Google advertising
+  blockable: "yes"
   suffixes: [doubleclick.net, googlesyndication.com, googleadservices.com, googletagmanager.com,
              googletagservices.com, adservice.google.com, g.doubleclick.net]
 - company: Google
@@ -151,9 +160,16 @@
 - company: Mozilla
   category: telemetry
   purpose: Firefox usage data, crash reports and experiments
+  blockable: "yes"
   suffixes: [incoming.telemetry.mozilla.org, telemetry.mozilla.org, crash-stats.mozilla.org,
              normandy.cdn.mozilla.net, classify-client.services.mozilla.com, experiments.mozilla.org,
-             firefox.settings.services.mozilla.com, merino.services.mozilla.com]
+             merino.services.mozilla.com]
+- company: Mozilla
+  category: security
+  purpose: Firefox Remote Settings (security blocklists, certificate revocation, add-on blocklist)
+  blockable: "no"
+  breaks: Firefox stops receiving security blocklists and certificate revocations.
+  suffixes: [firefox.settings.services.mozilla.com, firefox-settings-attachments.cdn.mozilla.net]
 - company: Mozilla
   category: update
   purpose: Firefox updates and add-on checks
@@ -171,8 +187,15 @@
 - company: Adobe
   category: telemetry
   purpose: Adobe usage analytics and licence checks
+  blockable: "yes"
   suffixes: [cc-api-data.adobe.io, adobedtm.com, omtrdc.net, demdex.net, 2o7.net, sstats.adobe.com,
-             genuine.adobe.com, prod.adobegenuine.com, lcs-cops.adobe.io, ic.adobe.io, assets.adobedtm.com]
+             ic.adobe.io, assets.adobedtm.com]
+- company: Adobe
+  category: licensing
+  purpose: Adobe licensing, activation and sign-in (Adobe asks administrators to allow these)
+  blockable: "no"
+  breaks: Acrobat and Creative Cloud apps fail to activate or sign in.
+  suffixes: [lcs-cops.adobe.io, lcs-robs.adobe.io, lcs-ulecs.adobe.io, ims-na1.adobelogin.com, genuine.adobe.com, prod.adobegenuine.com]
 - company: Adobe
   category: update
   purpose: Adobe updates
@@ -185,6 +208,7 @@
 - company: NVIDIA
   category: telemetry
   purpose: NVIDIA app usage data
+  blockable: "yes"
   suffixes: [events.gfe.nvidia.com, telemetry.gfe.nvidia.com, gfwsl.geforce.com, nvidia.tt.omtrdc.net,
              ls.dtrace.nvidia.com, images.nvidiagrid.net]
 - company: NVIDIA
@@ -200,7 +224,14 @@
 - company: Spotify
   category: telemetry
   purpose: Spotify usage logging
-  suffixes: [gew1-spclient.spotify.com, spclient.wg.spotify.com, log.spotify.com, analytics.spotify.com]
+  blockable: "yes"
+  suffixes: [log.spotify.com, analytics.spotify.com]
+- company: Spotify
+  category: content
+  purpose: Spotify's main client API (playlists, playback, sign-in); usage logging travels in the same connection
+  blockable: "no"
+  breaks: Spotify stops working.
+  suffixes: [spclient.wg.spotify.com, gew1-spclient.spotify.com, spclient.spotify.com, apresolve.spotify.com]
 - company: Spotify
   category: content
   purpose: Spotify streaming
@@ -262,8 +293,8 @@
   purpose: AMD driver updates and usage data
   suffixes: [amd.com, radeon.com]
 - company: Intel
-  category: telemetry
-  purpose: Intel Computing Improvement Program
+  category: cloud
+  purpose: Intel websites and services (drivers, support); not known to be reporting
   suffixes: [intel.com, intel.net]
 - company: Riot Games
   category: gaming
@@ -283,12 +314,17 @@
   suffixes: [apple.com, icloud.com, mzstatic.com, apple-dns.net, aaplimg.com, cdn-apple.com]
 - company: Meta
   category: advertising
-  purpose: Meta (Facebook, Instagram) and its tracking pixel
-  suffixes: [facebook.com, fbcdn.net, facebook.net, instagram.com, cdninstagram.com, whatsapp.com, whatsapp.net,
-             fbsbx.com, meta.com]
+  purpose: Meta's tracking pixel and advertising measurement
+  blockable: "yes"
+  suffixes: [connect.facebook.net, pixel.facebook.com, an.facebook.com, graph.facebook.com]
+- company: Meta
+  category: communication
+  purpose: Facebook, Instagram and WhatsApp themselves
+  suffixes: [facebook.com, fbcdn.net, facebook.net, instagram.com, cdninstagram.com, whatsapp.com, whatsapp.net, fb.com, messenger.com]
 - company: Amazon
   category: advertising
   purpose: Amazon advertising
+  blockable: "yes"
   suffixes: [amazon-adsystem.com, adtago.s3.amazonaws.com, device-metrics-us.amazon.com]
 - company: Amazon
   category: cloud
@@ -310,43 +346,66 @@
   suffixes: [fastly.net, fastlylb.net, fastly.com]
 - company: Sentry
   category: telemetry
+  vendor_site: true
   purpose: Crash and error reporting used by many apps
+  blockable: "yes"
   suffixes: [sentry.io, ingest.sentry.io, sentry-cdn.com]
 - company: Datadog
   category: telemetry
+  vendor_site: true
   purpose: App monitoring and usage analytics
+  blockable: "yes"
   suffixes: [datadoghq.com, browser-intake-datadoghq.com, datadoghq.eu]
 - company: Segment
   category: telemetry
+  vendor_site: true
   purpose: Usage analytics collector used by many apps
+  blockable: "yes"
   suffixes: [segment.io, segment.com, cdn.segment.com]
 - company: Amplitude
   category: telemetry
+  vendor_site: true
   purpose: Product usage analytics
+  blockable: "yes"
   suffixes: [amplitude.com, api.amplitude.com, api2.amplitude.com]
 - company: Mixpanel
   category: telemetry
+  vendor_site: true
   purpose: Product usage analytics
+  blockable: "yes"
   suffixes: [mixpanel.com, mxpnl.com]
 - company: Bugsnag
   category: telemetry
+  vendor_site: true
   purpose: Crash reporting
+  blockable: "yes"
   suffixes: [bugsnag.com]
 - company: New Relic
   category: telemetry
+  vendor_site: true
   purpose: App monitoring
+  blockable: "yes"
   suffixes: [newrelic.com, nr-data.net]
 - company: LaunchDarkly
   category: telemetry
+  vendor_site: true
   purpose: Remote feature flags and experiment assignment
+  blockable: "careful"
+  breaks: "Remote feature switches: the app may fall back to defaults and lose features."
   suffixes: [launchdarkly.com]
 - company: Statsig
   category: telemetry
+  vendor_site: true
   purpose: Experiments and usage analytics
+  blockable: "careful"
+  breaks: "Remote feature switches: the app may fall back to defaults and lose features."
   suffixes: [statsig.com, statsigapi.net, featuregates.org]
 - company: Intercom
   category: telemetry
+  vendor_site: true
   purpose: In-app messaging and user tracking
+  blockable: "careful"
+  breaks: "The app's in-app help chat stops working."
   suffixes: [intercom.io, intercomcdn.com]
 - company: Comcast
   category: connectivity
