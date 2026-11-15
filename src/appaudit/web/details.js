@@ -223,6 +223,201 @@ function ondiskSection(actor) {
   return card;
 }
 
+// --- inspect this app: run it with its own network log ---------------------------------------------
+
+const inspectState = { byActor: new Map(), reports: new Map(), choice: new Map(), message: new Map(), busy: false };
+
+async function loadInspect(actor) {
+  const response = await fetch(`/api/inspect?actor=${encodeURIComponent(actor.id)}`);
+  const body = await response.json();
+  inspectState.byActor.set(actor.id, response.ok ? body : { error: body.detail || "Could not read this app's programs." });
+  const live_ = (body.sessions || []).find((s) => s.status === "running");
+  if (live_) inspectState.reports.set(live_.id, await (await fetch(`/api/inspect/${live_.id}`)).json());
+  const reading = (body.sessions || []).find((s) => s.status === "reading");
+  renderLive();
+  if ((live_ || reading) && live.open === actor.id) setTimeout(() => { if (live.open === actor.id) loadInspect(actor); }, live_ ? 5000 : 2000);
+  if (!live_ && !reading) {                       // a report that finished reading while it was open: refresh it
+    for (const session of body.sessions || []) {
+      const shown = inspectState.reports.get(session.id);
+      if (shown && shown.status === "reading") inspectState.reports.set(session.id, await (await fetch(`/api/inspect/${session.id}`)).json());
+    }
+    renderLive();
+  }
+}
+
+async function openInspection(id) {
+  if (inspectState.reports.has(id)) { inspectState.reports.delete(id); renderLive(); return; }
+  inspectState.reports.set(id, { loading: true });
+  renderLive();
+  inspectState.reports.set(id, await (await fetch(`/api/inspect/${id}`)).json());
+  renderLive();
+}
+
+function button(text, handler, kind = "small") {
+  const node = el("button", { type: "button", class: kind, text });
+  node.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    if (inspectState.busy) return;
+    inspectState.busy = true;
+    node.disabled = true;
+    try { await handler(); } finally { inspectState.busy = false; }
+  });
+  return node;
+}
+
+function requestView(item, key) {
+  const summary = item.summary || {};
+  const facts = [item.status ? `answer ${item.status}` : "no answer recorded", item.body_size ? `sent ${bytes(item.body_size)}` : "no body",
+    summary.records ? `${plural(summary.records, "record")}` : null, summary.format && summary.format !== "json" ? summary.format : null,
+    item.body_note || null].filter(Boolean);
+  const identifying = Object.entries(summary.identifying || {});
+  return fold(`${key}|${item.time}|${item.url}`, el("span", { class: "mono", text: `${item.method} ${item.url}` }),
+    el("div", { class: "sub", text: `${new Date(Number(item.time)).toLocaleTimeString()} · ${facts.join(" · ")}` }),
+    summary.event_names && summary.event_names.length ? el("div", {}, el("strong", { text: "Events in it: " }),
+      summary.event_names.map(([name, count]) => el("span", { class: "chip tag", text: count > 1 ? `${name} ×${count}` : name }))) : null,
+    identifying.length ? el("div", {}, el("strong", { text: "Fields that identify you or this PC" }),
+      kv(identifying.map(([field, value]) => [field, secret(value)]))) : null,
+    summary.fields && summary.fields.length ? fold(`${key}|${item.time}|fields`, `All ${summary.fields.length} fields`,
+      el("div", { class: "mono sub", text: summary.fields.join(", ") })) : null,
+    item.request_headers ? fold(`${key}|${item.time}|headers`, "Request headers", el("pre", { class: "plan", text: item.request_headers })) : null,
+    item.body ? fold(`${key}|${item.time}|body`, `The body as sent${item.body_truncated ? " (first 60,000 characters)" : ""}`,
+      el("pre", { class: "plan", text: item.body })) : null);
+}
+
+function inspectionReport(actor, data) {
+  if (data.loading) return el("div", { class: "sub", text: "Loading…" });
+  if (data.status === "reading") return el("div", { class: "sub", text: "Reading the log… This can take a minute for a long session." });
+  if (!data.report) return el("div", { class: "none", text: "No report was saved." });
+  const report = data.report;
+  if (report.error) return el("div", { class: "none", text: report.error });
+  if (!report.requests.length) return el("div", { class: "sub", text: "The app wrote no requests to its log. Either it sent nothing while it ran, "
+    + "or it does not support the network log (it may not be built on Chromium, or it may have restarted itself without the setting)." });
+  const key = `${actor.id}|inspect|${data.id}`;
+  const remove = button("Delete this inspection", async () => { await post(`/api/inspect/${data.id}/delete`); inspectState.reports.delete(data.id);
+    await loadInspect(actor); });
+  return el("div", {},
+    el("div", { class: "sub", text: `${plural(report.requests.length, "request")} to ${plural(report.hosts.length, "destination")}. `
+      + "Cookies, sign-in tokens and passwords were replaced; the raw log was deleted." }),
+    smallTable(["Destination", "Requests", "Sent", "Events", "Identifying fields"], report.hosts.map((h) => el("tr", {},
+      el("td", { class: "mono", text: h.host }), el("td", { class: "num", text: h.requests }), el("td", { class: "num", text: bytes(h.sent) }),
+      el("td", {}, h.event_names.slice(0, 6).map(([name, count]) => el("span", { class: "chip tag", text: `${name} ×${count}` }))),
+      el("td", { class: "sub mono", text: h.identifying.join(", ") })))),
+    fold(`${key}|all`, `Every request (${report.requests.length})`, report.requests.map((item) => requestView(item, key))),
+    el("div", { class: "actions" }, remove));
+}
+
+function inspectSection(actor) {
+  const data = inspectState.byActor.get(actor.id);
+  if (data === undefined) {
+    inspectState.byActor.set(actor.id, null);
+    loadInspect(actor);
+  }
+  const card = el("div", { class: "card" }, el("h2", { text: "Inspect this app" }));
+  if (!data) { card.append(el("div", { class: "sub", text: "Looking at its programs…" })); return card; }
+  if (data.error) { card.append(el("div", { class: "none", text: data.error })); return card; }
+  if (!data.programs.length) {
+    card.append(el("div", { class: "sub", text: "Part of Windows or no program file of its own, so it cannot be inspected this way." }));
+    return card;
+  }
+  card.append(el("div", { class: "sub", text: "Runs the app with its own network log switched on, so you can see every request it makes while you use it, "
+    + "with what is inside. Works for apps built on Chromium or Electron. Nothing is intercepted: the app writes the log itself, for this run only. "
+    + "The log holds cookies and sign-in tokens, so it is deleted once it has been read; what is kept has secrets replaced." }));
+  const message = inspectState.message.get(actor.id);
+  if (message) card.append(el("div", { class: "notice", text: message }));
+  const current = data.sessions.find((s) => s.status === "running");
+  if (current) {
+    const status = inspectState.reports.get(current.id) || current;
+    card.append(kv([["program", status.exe], ["started", new Date(status.started * 1000).toLocaleString()],
+      ["app open", status.app_running ? "yes" : "no, it was closed"],
+      ["requests logged so far", status.requests_so_far ?? "…"], ["log size", bytes(status.log_bytes || 0)]]));
+    if (status.no_log) card.append(el("div", { class: "warn", text: "No log has appeared after 30 seconds. This program probably does not support it, "
+      + "or it handed over to another program and closed." }));
+    if (status.large) card.append(el("div", { class: "warn", text: "The log is over 2 GB: it also records everything the app downloads. "
+      + "End the inspection soon; at 4 GB it is ended automatically." }));
+    card.append(el("div", { class: "actions" },
+      button(status.app_running ? "End: close the app and show what it sent" : "Show what it sent", async () => {
+        await post(`/api/inspect/${current.id}/finish`, { close_app: true });
+        inspectState.message.delete(actor.id);
+        await loadInspect(actor);
+        await openInspection(current.id);
+      }, "primary small")));
+    return card;
+  }
+  const choice = inspectState.choice.get(actor.id) || data.programs[0].exe;
+  const program = data.programs.find((p) => p.exe === choice) || data.programs[0];
+  const select = el("select", {}, data.programs.map((p) => {
+    const option = el("option", { value: p.exe, text: `${p.name}${p.main ? "" : " (helper)"}${p.chromium ? "" : " (not Chromium)"}` });
+    if (p.exe === program.exe) option.selected = true;
+    return option;
+  }));
+  select.addEventListener("click", (event) => event.stopPropagation());
+  select.addEventListener("change", () => { inspectState.choice.set(actor.id, select.value); renderLive(); });
+  const controls = [data.programs.length > 1 ? select : el("span", { class: "mono", text: program.name })];
+  if (!program.chromium) card.append(el("div", { class: "warn", text: "This program does not look like it is built on Chromium, so it probably cannot write "
+    + "a network log (Firefox, most games and native apps cannot). You can still try." }));
+  if (program.running.length) {
+    card.append(el("div", { class: "warn", text: `${program.name} is running (${plural(program.running.length, "process", "processes")}). `
+      + "It has to be closed first, so it can be started again with its log on. Close it yourself, or let this tool close it "
+      + "(anything unsaved in it may be lost)." }));
+    controls.push(button("Close it for me", async () => {
+      const response = await post("/api/inspect/close-app", { actor: actor.id, exe: program.exe });
+      const body = await response.json();
+      inspectState.message.set(actor.id, response.ok ? (body.still_running ? "Some of its processes did not close." : `${program.name} was closed.`) : body.detail);
+      await loadInspect(actor);
+    }), button("I closed it", async () => { await loadInspect(actor); }));
+  } else {
+    controls.push(button("Start the app with its network log", async () => {
+      const response = await post("/api/inspect/start", { actor: actor.id, exe: program.exe });
+      const body = await response.json();
+      inspectState.message.set(actor.id, response.ok ? `${program.name} started. Use it as you normally would, then end the inspection here.` : body.detail);
+      await loadInspect(actor);
+    }, "primary small"));
+  }
+  card.append(el("div", { class: "actions" }, controls));
+  const past = data.sessions.filter((s) => s.status !== "running");
+  if (past.some((s) => s.status === "reading")) card.append(el("div", { class: "notice", text: "Reading the app's log and then deleting it…" }));
+  if (past.length) {
+    card.append(el("h3", { text: "Earlier inspections" }), ...past.map((s) => {
+      const open = inspectState.reports.get(s.id);
+      return el("div", { class: "row" }, el("div", { class: "grow" },
+        el("div", { text: `${new Date(s.started * 1000).toLocaleString()} · ${Math.max(1, Math.round(((s.ended || s.started) - s.started) / 60))} min · `
+          + (s.status === "reading" ? "reading…" : `${plural(s.requests || 0, "request")} to ${plural(s.hosts || 0, "destination")}`) }),
+        s.note ? el("div", { class: "sub", text: s.note }) : null,
+        open ? inspectionReport(actor, open) : null),
+      button(open ? "Hide" : "Show", () => openInspection(s.id)));
+    }));
+  }
+  return card;
+}
+
+// What the app sent, when request content recording is on. Only possible for programs that use
+// Windows' own web library; the others encrypt inside the app (see "Inspect this app").
+function contentFold(actor, data, key, encrypted) {
+  const recording = inside.helper && inside.helper.content;
+  const watching = inside.helper && inside.helper.running;
+  let body;
+  if (data.payloads.length) {
+    body = [el("div", { class: "sub", text: `The newest ${data.payloads.length} recorded requests. Cookies, sign-in tokens and passwords were replaced before saving.` }),
+      ...data.payloads.map(payloadView)];
+  } else if (encrypted) {
+    body = el("div", { class: "sub", text: "This app encrypts its traffic itself, so its requests cannot be recorded by the watcher. "
+      + "\"Inspect this app\" can show them by running the app with its own network log switched on." });
+  } else if (!watching) {
+    body = el("div", { class: "sub", text: "Start watching first: the watcher records request content." });
+  } else if (recording) {
+    body = el("div", { class: "sub", text: "Recording is on. Requests this app makes from now on will appear here." });
+  } else {
+    const button = el("button", { type: "button", class: "small", text: "Record what it sends" });
+    button.addEventListener("click", async (event) => { event.stopPropagation(); button.disabled = true; await setContent(true, false);
+      details.byActor.delete(actor.id); renderLive(); });
+    body = [el("div", { class: "sub", text: "This app uses Windows' own web library, so the watcher can record the headers and the first "
+      + "4,000 characters of each request it sends. Cookies, sign-in tokens and passwords are replaced before saving; recordings "
+      + "stay on this PC for seven days. This turns recording on for every program that uses that library." }),
+    el("div", { class: "actions" }, button)];
+  }
+  return fold(key, `What it sent (${data.payloads.length} recorded)`, body);
+}
+
 function recordsSection(actor) {
   const data = details.byActor.get(actor.id);
   if (data === undefined) {
@@ -234,7 +429,7 @@ function recordsSection(actor) {
   if (data.error || !data.available) { card.append(el("div", { class: "none", text: data.error || "Nothing recorded yet." })); return card; }
   const k = (name) => `${actor.id}|${name}`;
   const encrypted = !data.requests.length;
-  card.append(
+  card.append(contentFold(actor, data, k("content"), encrypted),
     fold(k("timeline"), `When it sends (${data.timeline.length} hours with traffic)`, timelineView(data.timeline)),
     fold(k("destinations"), `All ${data.destinations.length} destinations`, smallTable(
       ["Destination", "Company", "Kind", "Sent", "Received", "Contacts", "First", "Last", "Programs"],

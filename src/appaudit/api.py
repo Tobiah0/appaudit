@@ -228,6 +228,87 @@ def get_app_ondisk(actor: str) -> dict:
     return cached(("ondisk", actor), 30, lambda: ondisk.for_app(exes, found.get("name") or "", found.get("publisher") or ""))
 
 
+# --- inspect this app: run it with its own network log ------------------------------------------
+# Starts or closes only programs the watcher recorded for this app, and only when the person
+# presses the button.
+
+def _inspect_program(actor_id: str, exe: str) -> tuple[dict, str]:
+    from . import inspection
+
+    found = _actor(actor_id)
+    for item in inspection.candidates(found.get("exes") or []):
+        if inspection._same(item["exe"], exe):
+            return found, item["exe"]
+    raise HTTPException(400, "That program is not one of this app's own programs.")
+
+
+@app.get("/api/inspect")
+def get_inspect(actor: str) -> dict:
+    from . import inspection
+
+    found = _actor(actor)
+    return {"programs": inspection.candidates(found.get("exes") or []), "sessions": inspection.listing(actor)}
+
+
+@app.post("/api/inspect/start")
+async def post_inspect_start(request: Request) -> dict:
+    from . import inspection
+
+    body = await request.json()
+    found, exe = _inspect_program(str(body.get("actor", "")), str(body.get("exe", "")))
+    try:
+        return inspection.start(found["id"], found["name"], exe)
+    except inspection.Running as error:
+        raise HTTPException(409, f"{found['name']} is running ({len(error.processes)} processes). Close it first, "
+                                 "so it can be started with its network log on.") from error
+    except (OSError, ValueError) as error:
+        raise HTTPException(400, f"Could not start it: {error}") from error
+
+
+@app.post("/api/inspect/close-app")
+async def post_inspect_close(request: Request) -> dict:
+    from . import inspection
+
+    body = await request.json()
+    _found, exe = _inspect_program(str(body.get("actor", "")), str(body.get("exe", "")))
+    return {"closed": inspection.close(exe), "still_running": len(inspection.running(exe))}
+
+
+@app.get("/api/inspect/{inspection_id}")
+def get_inspection(inspection_id: str) -> dict:
+    from . import inspection
+
+    try:
+        meta = inspection.load(inspection_id)
+        return inspection.status(inspection_id) if meta["status"] == "running" else inspection.report(inspection_id)
+    except KeyError as error:
+        raise HTTPException(404, "unknown inspection") from error
+
+
+@app.post("/api/inspect/{inspection_id}/finish")
+async def post_inspection_finish(inspection_id: str, request: Request) -> dict:
+    from . import inspection
+
+    body = await request.json()
+    try:
+        return inspection.finish(inspection_id, close_app=bool(body.get("close_app", True)))
+    except KeyError as error:
+        raise HTTPException(404, "unknown inspection") from error
+
+
+@app.post("/api/inspect/{inspection_id}/delete")
+def post_inspection_delete(inspection_id: str) -> dict:
+    from . import inspection
+
+    try:
+        inspection.delete(inspection_id)
+    except KeyError as error:
+        raise HTTPException(404, "unknown inspection") from error
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from error
+    return {"deleted": True}
+
+
 @app.get("/api/switches/for-app")
 def get_switches_for_app(actor: str) -> dict:
     """The switches that concern one app on the Activity page, with their current state."""
