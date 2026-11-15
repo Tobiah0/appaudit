@@ -1,0 +1,41 @@
+# Hosts that must never be blocked, whatever list says they are trackers.
+#
+# Blocking these breaks sign-in, licensing, updates, time or security. Sources: the vendors' own
+# allowlists and the Pi-hole community's record of what people had to unblock (see
+# BLOCKING-RESEARCH.md). Entries are host suffixes; "reason" is what breaks.
+#
+# Destinations marked blockable: "no" in domains.yaml are never blocked either.
+
+- reason: Microsoft account sign-in
+  source: https://learn.microsoft.com/windows/privacy/manage-windows-11-endpoints
+  suffixes: [login.live.com, login.microsoftonline.com, login.windows.net, account.live.com, g.live.com]
+- reason: Windows clock synchronisation
+  source: https://learn.microsoft.com/windows/privacy/manage-windows-11-endpoints
+  suffixes: [time.windows.com]
+- reason: Microsoft Store and app licensing
+  source: https://discourse.pi-hole.net/t/commonly-whitelisted-domains/212
+  suffixes: [licensing.mp.microsoft.com, displaycatalog.mp.microsoft.com, storecatalogrevocation.storequality.microsoft.com]
+- reason: Windows Update and Store downloads
+  source: https://discourse.pi-hole.net/t/commonly-whitelisted-domains/212
+  suffixes: [dl.delivery.mp.microsoft.com, geo-prod.do.dsp.mp.microsoft.com, kv501.prod.do.dsp.mp.microsoft.com,
+             windowsupdate.com, update.microsoft.com, delivery.mp.microsoft.com, do.dsp.mp.microsoft.com]
+- reason: Microsoft Defender cloud protection and SmartScreen (security)
+  source: https://learn.microsoft.com/windows/privacy/manage-windows-11-endpoints
+  suffixes: [wdcp.microsoft.com, wd.microsoft.com, smartscreen.microsoft.com, smartscreen-prod.microsoft.com,
+             nav.smartscreen.microsoft.com, wdcpalt.microsoft.com]
+- reason: Certificate revocation checks (security)
+  source: https://learn.microsoft.com/windows/privacy/manage-windows-11-endpoints
+  suffixes: [ocsp.digicert.com, crl3.digicert.com, crl4.digicert.com, ocsp.sectigo.com, crl.microsoft.com, ocsp.msocsp.com,
+             ctldl.windowsupdate.com, r3.o.lencr.org, x1.c.lencr.org, ocsp.pki.goog, crl.pki.goog]
+- reason: Google Safe Browsing (security warnings for dangerous sites and downloads)
+  source: https://developers.google.com/safe-browsing
+  suffixes: [safebrowsing.googleapis.com, safebrowsing.google.com, sb-ssl.google.com]
+- reason: Browser and app updates
+  source: https://discourse.pi-hole.net/t/commonly-whitelisted-domains/212
+  suffixes: [update.googleapis.com, aus5.mozilla.org, msedge.api.cdp.microsoft.com, edgedl.me.gvt1.com]
+- reason: Adobe licensing and sign-in (Adobe asks administrators to allow these)
+  source: https://community.adobe.com/questions-617/firewall-details-for-adobe-acrobat-pro-subscription-for-activate-license-554572
+  suffixes: [lcs-cops.adobe.io, lcs-robs.adobe.io, lcs-ulecs.adobe.io, ims-na1.adobelogin.com]
+- reason: Spotify's client API (playback and playlists)
+  source: https://discourse.pi-hole.net/t/commonly-whitelisted-domains/212
+  suffixes: [spclient.wg.spotify.com, apresolve.spotify.com]

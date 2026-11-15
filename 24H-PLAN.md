@@ -69,8 +69,8 @@ then depth.
 
 ## Phase 3: stopping reporting without breaking the app (STOPPING.md)
 
-- [ ] 3.1 Shared-address check from the names table, by time.
-- [ ] 3.2 Never-block list (Adobe licensing, Microsoft sign-in/time/licensing/Defender, Pi-hole
+- [x] 3.1 Shared-address check from the names table, by time.
+- [x] 3.2 Never-block list (Adobe licensing, Microsoft sign-in/time/licensing/Defender, Pi-hole
       breakage knowledge) as data, with tests.
 - [ ] 3.3 Method chooser: (sender, destination) to switch / stop program / address block / name
       block / nothing safe, with reasons; tests from the table in STOPPING.md.
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **3.1 + 3.2** (done): `blocking.py`: `shared()` finds a name's addresses and the other names they carried at overlapping times (aliases from the same DNS answer and the same site are not counted), and lists which of those must not break; `never_block()` reads knowledge/neverblock.yaml (sign-in, time, Store licensing, Windows Update, Defender/SmartScreen, certificate revocation, Safe Browsing, updaters, Adobe licensing, Spotify API, with sources) plus domains marked blockable "no". Real data: Google Analytics addresses would also block Safe Browsing and Google's updater; Datadog, Adobe analytics, Sentry, Mozilla telemetry and Microsoft's collector are clean. 167 tests.
 - **2.4** (done): `presence.py`: the dashboard records one bit per minute (keyboard or mouse used in the last 2 minutes, via GetLastInputInfo, no elevation, nothing else stored, kept 30 days). Traffic is split into while present / while away / unknown (minutes without a record are unknown, never away). Third-party and unused-app cases add "N% of it went out while nobody was at the keyboard" once at least half the bytes fall in recorded minutes; evidence shows the split. Sampler verified recording (first minute: away, Tobiah is out). The sentence itself needs a few hours of samples; re-check in 6.3. SRUM's per-day input time is not used for minutes (too coarse). 158 tests.
 - **2.3** (done): Cases is the first page and the default. Open / Marked fine / Fixed tabs, 24 h or 7 days; each case shows its sentence, evidence (collapsed), switch previews inline, "Look at the app" (opens its Activity view), and "It's fine" / "Show it again". Verified in the browser on the real capture: 14 open cases; Firefox's switch preview opens in its case; marking Steam fine hid it and showing it again restored the count; Look at the app opens Claude's view. 154 tests.
 - **2.1 + 2.2** (done): `cases.py` builds cases with stable ids, severity, one-sentence statements of what was observed, evidence, actions (the app's switches) and states (open, accepted, testing; fixed when a says-vs-does case disappears). Accepted cases reopen when their fingerprint changes (new company, 4x more data). Dismissed apps count as accepted. Contrasts: says vs does, can be switched off, third party (destination company is not the app's maker), unused vs active (updaters excluded, small ones grouped), new company. On the real capture: 14 open cases (from 25 before grouping), e.g. "Claude sent 11.8 MB to Datadog, Intercom, not to Anthropic PBC." API `/api/cases`, `/api/cases/decide`. Build takes ~9 s, cached 60 s; to speed up later. 154 tests.
