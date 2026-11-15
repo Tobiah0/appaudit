@@ -141,7 +141,8 @@ function actorDetail(actor) {
         el("div", { class: "sub", text: [d.name ? d.addresses.join(", ") : null, d.ports.join(", ")].filter(Boolean).join(" · ") })),
       el("td", { text: d.company || d.owner || "Unknown" }),
       el("td", {}, d.category ? categoryChip(d.category) : el("span", { class: "none", text: "Not identified" }),
-        d.tracker ? el("div", { class: "sub", text: d.tracker }) : null),
+        d.tracker ? el("div", { class: "sub", text: d.tracker }) : null,
+        d.via_websites ? el("div", { class: "sub", text: "Loaded by websites you visited, not the browser itself" }) : null),
       el("td", {}, el("div", { text: d.purpose || "" }), d.breaks ? el("div", { class: "sub", text: `If blocked: ${d.breaks}` }) : null),
       el("td", { class: "num", text: bytes(d.sent) }), el("td", { class: "num", text: bytes(d.received) }),
       el("td", { text: since(d.last) }));
@@ -216,7 +217,8 @@ function renderLive() {
     const row = el("tr", { class: live.open === actor.id ? "app open" : "app" },
       whoCell(actor),
       el("td", { class: "num" }, el("div", { text: bytes(actor.sent) }),
-        actor.reporting_sent ? el("div", { class: "sub warn", text: `${bytes(actor.reporting_sent)} to reporting or ads` }) : null),
+        actor.reporting_sent ? el("div", { class: "sub warn", text: `${bytes(actor.reporting_sent)} to reporting or ads` }) : null,
+        actor.website_tracking_sent ? el("div", { class: "sub", text: `${bytes(actor.website_tracking_sent)} to trackers on websites you visited` }) : null),
       el("td", { class: "num", text: bytes(actor.received) }),
       goesToCell(actor), purposeCell(actor), el("td", { title: clock(actor.last), text: since(actor.last) }));
     row.addEventListener("click", () => { live.open = live.open === actor.id ? null : actor.id; renderLive(); });

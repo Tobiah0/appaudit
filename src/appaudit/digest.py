@@ -53,12 +53,17 @@ def build(hours: float = 12) -> dict:
     helper = activity.helper_state()
 
     reporters = []
+    website_tracking = []
     idle_but_active = []
     for actor in snapshot["actors"]:
         if actor["reporting_sent"]:
-            targets = [d["name"] or d["address"] for d in actor["destinations"] if d["category"] in labels.REPORTING][:4]
+            targets = [d["name"] or d["address"] for d in actor["destinations"]
+                       if d["category"] in labels.REPORTING and not d.get("via_websites")][:4]
             reporters.append({"name": actor["name"], "is_system": actor["is_system"], "sent": actor["reporting_sent"],
                               "to": targets})
+        if actor.get("website_tracking_sent"):
+            website_tracking.append({"name": actor["name"], "sent": actor["website_tracking_sent"],
+                                     "companies": actor.get("website_trackers", [])[:6]})
         app = apps.get(actor["id"])
         if app and not actor["is_system"]:
             days = app.get("days_unused")
@@ -84,6 +89,7 @@ def build(hours: float = 12) -> dict:
         "companies": [{"company": c["company"], "sent": c["sent"], "received": c["received"], "actors": c["actors"][:5]}
                       for c in snapshot["companies"][:8]],
         "reporters": reporters[:12], "idle_but_active": idle_but_active[:12],
+        "website_tracking": sorted(website_tracking, key=lambda item: -item["sent"]),
         "reporting_runs": _reporting_runs(since), "contradictions": contradictions,
         "counters": report.get("counters"),
     }

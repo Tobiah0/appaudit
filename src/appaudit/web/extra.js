@@ -173,6 +173,10 @@ async function loadSummary() {
     el("li", {}, el("strong", { text: item.title }), `: ${footprintText(item.seen)}`))));
   blocks.push(finding("Sent data to usage-reporting or advertising services", data.reporters.map((item) =>
     el("li", {}, el("strong", { text: item.name }), ` sent ${bytes(item.sent)} to ${item.to.join(", ")}`))));
+  blocks.push(finding("Trackers on websites you visited", (data.website_tracking || []).map((item) =>
+    el("li", {}, el("strong", { text: item.name }), ` loaded trackers that received ${bytes(item.sent)}`
+      + (item.companies.length ? `: ${item.companies.join(", ")}` : ""),
+      el("div", { class: "sub", text: "These come from the pages you open, not from the browser itself. A tracker-blocking extension or the browser's own tracking protection stops most of them." })))));
   blocks.push(finding("Active, though you rarely or never open them", data.idle_but_active.map((item) =>
     el("li", {}, el("strong", { text: item.name }),
       ` ${item.never_recorded ? "has no record of you opening it" : `was last opened ${item.days_unused} days ago`}`

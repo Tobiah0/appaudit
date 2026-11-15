@@ -10,7 +10,7 @@ import threading
 import time
 from collections import defaultdict
 
-from . import livestore
+from . import browsers, livestore
 from .attribution import Attributor
 from .naming import labels
 from .naming.owners import OWNERS
@@ -167,19 +167,32 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
         totals["destinations"].add(row["remote"])
         if destination["name"]:
             totals["named"].add(row["remote"])
-        if category in labels.REPORTING:
-            totals["reporting_bytes"] += row["sent"]
 
     actor_list = []
+    totals["reporting_bytes"] = totals["website_tracking"] = 0
     for actor in actors.values():
         destinations = sorted(actor["destinations"].values(), key=lambda item: -(item["sent"] + item["received"]))
+        browser = browsers.browser_for(actor["processes"])
         for item in destinations:
             item["ports"] = sorted(item["ports"])
             item["addresses"] = sorted(item["addresses"])[:4]
+            # In a browser, trackers come from the websites you open, unless the host is the browser's own.
+            item["via_websites"] = bool(browser and item["category"] in labels.REPORTING
+                                        and not browsers.is_own(browser, item["name"]))
+        reporting = sum(item["sent"] for item in destinations if item["category"] in labels.REPORTING and not item["via_websites"])
+        website = sum(item["sent"] for item in destinations if item["via_websites"])
+        totals["reporting_bytes"] += reporting
+        totals["website_tracking"] += website
+        trackers: list[str] = []
+        for item in destinations:
+            who_ = item["company"] or item["name"] or item["owner"]
+            if item["via_websites"] and who_ and who_ not in trackers:
+                trackers.append(who_)
+        actor["website_trackers"] = trackers[:8]
         actor.update(destinations=destinations[:60], destination_count=len(destinations),
                      processes=sorted(actor["processes"]), exes=sorted(actor["exes"])[:8], runs=len(actor["runs"]), tasks=sorted(actor["tasks"]),
-                     categories=dict(actor["categories"]),
-                     reporting_sent=sum(item["sent"] for item in destinations if item["category"] in labels.REPORTING))
+                     categories=dict(actor["categories"]), browser=browser["name"] if browser else None,
+                     reporting_sent=reporting, website_tracking_sent=website)
         actor_list.append(actor)
     actor_list.sort(key=lambda item: -(item["sent"] + item["received"]))
     company_list = [{**company, "actors": sorted(company["actors"]), "categories": dict(company["categories"]),
@@ -189,6 +202,7 @@ def snapshot(since: float | None = None, until: float | None = None) -> dict:
         "window": {"since": since, "until": until}, "actors": actor_list, "companies": company_list,
         "totals": {"sent": totals["sent"], "received": totals["received"], "destinations": len(totals["destinations"]),
                    "named": len(totals["named"]), "reporting_sent": totals["reporting_bytes"],
+                   "website_tracking_sent": totals["website_tracking"],
                    "actors": len(actor_list)},
     }
 
