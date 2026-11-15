@@ -212,7 +212,12 @@ def _channel_switch(product: dict, channel: dict, covered: set, shared: dict[str
         return None
     links = channel.get("links") or {}
     product_links = product.get("links") or {}
+    # Proof: the product's own programs sending to destinations the knowledge base calls reporting.
+    own_programs = [_exe(name) for name in product.get("executable_name") or []
+                    if _owns(product["id"], shared.get("exe:" + name.lower(), {product["id"]}))]
+    expect = {"reporting_from": {"processes": own_programs}} if own_programs and new else {}
     return {
+        "expect": expect,
         "id": f"toptout.{product['id']}.{channel['id']}",
         "title": f"{product['name']}: {channel['name']}",
         "group": f"{product.get('category_name', 'Other')} (from toptout)",

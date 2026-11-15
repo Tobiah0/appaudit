@@ -23,6 +23,7 @@ import time
 from collections import defaultdict
 
 from . import livestore, switches
+from .naming import labels
 
 MIN_HOURS = 1.0          # observation needed on each side before a before/after verdict is given
 NAME_VALID = 24 * 3600   # an address counts as a name for this long after the name was last resolved
@@ -39,7 +40,7 @@ def _lower(items) -> list[str]:
 
 def validate_expect(expect: dict, switch_id: str) -> None:
     """Domains alone are not evidence: someone the switch controls must have sent the traffic."""
-    unknown = set(expect) - {"processes", "services", "tasks", "domains", "senders"}
+    unknown = set(expect) - {"processes", "services", "tasks", "domains", "senders", "reporting_from"}
     if unknown:
         raise ValueError(f"{switch_id}: unknown expect keys {sorted(unknown)}")
     senders = expect.get("senders") or {}
@@ -50,6 +51,9 @@ def validate_expect(expect: dict, switch_id: str) -> None:
         raise ValueError(f"{switch_id}: domains need the programs that send to them (processes, services or senders)")
     if senders and not expect.get("domains"):
         raise ValueError(f"{switch_id}: senders only count traffic to domains, and none are listed")
+    reporting = expect.get("reporting_from") or {}
+    if reporting and (set(reporting) - {"processes"} or not reporting.get("processes")):
+        raise ValueError(f"{switch_id}: reporting_from takes a list of processes")
 
 
 def _names(conn: sqlite3.Connection) -> dict[str, list[tuple[str, float, float]]]:
@@ -76,11 +80,16 @@ def footprint(conn: sqlite3.Connection, expect: dict, since: float, until: float
     sender_spec = expect.get("senders") or {}
     sender_processes = set(_lower(sender_spec.get("processes")))
     sender_services = set(_lower(sender_spec.get("services")))
+    # reporting_from: these programs' traffic counts when it goes to a destination the knowledge base
+    # calls reporting (telemetry or advertising). Used where no list of hosts is known, e.g. switches
+    # imported from toptout.
+    reporting_processes = set(_lower((expect.get("reporting_from") or {}).get("processes")))
 
     owned: set[int] = set()          # the switch stops these outright: runs and all traffic count
     senders_only: set[int] = set()   # only their traffic to `domains` counts
+    reporting_only: set[int] = set()  # only their traffic to reporting destinations counts
     runs = defaultdict(int)
-    for row in conn.execute("SELECT id, name, services, task, started, ended, seen_start FROM procs "
+    for row in conn.execute("SELECT id, name, services, task, started, ended, seen_start, cmdline FROM procs "
                             "WHERE started <= ? AND (ended IS NULL OR ended >= ?)", (until, since)):
         name = (row["name"] or "").lower()
         hosted = {item.lower() for item in (row["services"] or "").split(",") if item}
@@ -91,8 +100,12 @@ def footprint(conn: sqlite3.Connection, expect: dict, since: float, until: float
                 runs[row["name"]] += 1
         elif name in sender_processes or hosted & sender_services:
             senders_only.add(row["id"])
+        elif name in reporting_processes and "--user-data-dir=" not in (row["cmdline"] or "").lower():
+            # A run with its own profile (--user-data-dir) is not governed by the user's settings,
+            # so it is no evidence for or against a setting in the user's profile.
+            reporting_only.add(row["id"])
 
-    names = _names(conn) if (owned or senders_only) else {}
+    names = _names(conn) if (owned or senders_only or reporting_only) else {}
 
     sent = received = contacts = 0
     destinations: dict[str, int] = defaultdict(int)
@@ -102,12 +115,16 @@ def footprint(conn: sqlite3.Connection, expect: dict, since: float, until: float
                             "p.name FROM flows f JOIN procs p ON p.id = f.proc_id "
                             "WHERE f.last >= ? AND f.first <= ?", (since, until)):
         buckets.add(row["bucket"])
-        if row["proc_id"] not in owned and row["proc_id"] not in senders_only:
+        if row["proc_id"] not in owned and row["proc_id"] not in senders_only and row["proc_id"] not in reporting_only:
             continue
         current = _names_at(names.get(row["remote"], []), row["first"], row["last"])
         expected = [name for name in current if _suffix_match(name, domains)]
         if row["proc_id"] in senders_only and not expected:
             continue
+        if row["proc_id"] in reporting_only:
+            expected = [name for name in current if labels.for_name(name)["category"] in labels.REPORTING]
+            if not expected:
+                continue
         sent += row["sent"]
         received += row["received"]
         contacts += row["events"]

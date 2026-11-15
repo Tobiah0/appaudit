@@ -159,3 +159,23 @@ def test_report_uses_journal_for_before_and_after(tmp_path):
     assert item["state"] == "private"
     assert item["change"]["verdict"] == "stopped"
     assert item["change"]["before"]["runs"] == 4
+
+
+def test_reporting_from_counts_only_reporting_destinations_and_ignores_separate_profiles(tmp_path, monkeypatch):
+    from appaudit.naming import labels
+
+    monkeypatch.setattr(labels, "_blocklists", lambda: (set(), {}))
+    labels.for_name.cache_clear()
+    now = time.time()
+    conn = make_db(tmp_path, 0, 0, now - 6 * HOUR)
+    conn.execute("INSERT INTO names VALUES ('192.0.2.1', 'mobile.events.data.microsoft.com', 'dns', ?, ?)", (now - 5 * HOUR, now))
+    conn.execute("INSERT INTO names VALUES ('192.0.2.2', 'marketplace.visualstudio.com', 'dns', ?, ?)", (now - 5 * HOUR, now))
+    add_flow(conn, 900, "Code.exe", "192.0.2.1", 700, now - 2 * HOUR)               # telemetry: counts
+    add_flow(conn, 901, "Code.exe", "192.0.2.2", 5000, now - 2 * HOUR)              # marketplace: does not
+    add_flow(conn, 902, "Code.exe", "192.0.2.1", 9000, now - 2 * HOUR)              # blank-profile test run
+    conn.execute("UPDATE procs SET cmdline = 'Code.exe --user-data-dir=C:\Temp\p' WHERE id = 902")
+    expect = {"reporting_from": {"processes": ["code.exe"]}}
+    proof.validate_expect(expect, "t")
+    mark = proof.footprint(conn, expect, now - 5 * HOUR, now)
+    assert mark["sent"] == 700 and mark["destinations"][0][0] == "mobile.events.data.microsoft.com"
+    labels.for_name.cache_clear()

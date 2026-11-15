@@ -49,7 +49,7 @@ then depth.
 - [x] 1.3 Leave out App Audit itself and development tools it runs (its own Python, uv) from
       findings, or label them; same for Claude Code's own processes where identifiable.
 - [x] 1.4 Unresolved "pid NNNN" actors under System: attribute or group them honestly.
-- [ ] 1.5 Proof for imported switches: give toptout switches an `expect` from the app's own
+- [x] 1.5 Proof for imported switches: give toptout switches an `expect` from the app's own
       programs and known telemetry hosts where safe; otherwise mark "no proof available".
 
 ## Phase 2: cases (PRODUCT.md)
@@ -112,6 +112,7 @@ then depth.
 
 Newest first. Each entry: item, what changed, how it was verified, commit.
 
+- **1.5** (done): new proof rule `reporting_from`: a product's own programs sending to destinations the knowledge base calls reporting. 74 of 183 imported switches now have proof (the rest are steps-only or share a program with another product). Runs with their own profile (`--user-data-dir`) are not counted, because the user's settings do not govern them. Real result: Tobiah's VS Code telemetry switch shows **off and quiet**; without the profile rule Claude's blank-profile test would have made it look "off but still active". 144 tests.
 - **1.4** (done): processes known only by id borrow the program of an overlapping record with the same id; any left over go into one group, "Programs that ended before they could be identified". On the real capture all 106 were resolved; no `pid NNNN` rows remain and System lists only System. 143 tests.
 - **1.3** (done): interpreters (Python, Node, Java...) are attributed to what they run: App Audit itself (kept out of findings), scripts run by Claude Code, a `-m` module or a project found by its venv or project files. Real data: the 23.7 MB "Python" traffic was Tobiah's own project `novel_ultimate (backend)`; the 68 destinations incl. Facebook/Mixpanel were Claude's research scripts. Python and dev tools no longer appear as "active though never opened". 141 tests.
 - **1.2** (done): knowledge/browsers.yaml lists each browser's programs and its own reporting hosts; anything else reporting-shaped from a browser is "trackers on websites you visited", counted apart (`website_tracking_sent`) and shown as its own Summary finding and in the app view. Real data (24h): Firefox's own reporting is 791 KB to incoming.telemetry.mozilla.org; website trackers 812 KB (Firefox) and 952 KB (Chrome) no longer inflate the reporting total (18.0 to 16.5 MB). Checked on the Summary page. 134 tests.
