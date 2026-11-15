@@ -151,3 +151,14 @@ App Audit reads the first three already; the rest are item 4.1 of [24H-PLAN.md](
 Sources: [Unity CrashReporting.crashReportFolder](https://docs.unity3d.com/ScriptReference/Windows.CrashReporting-crashReportFolder.html),
 [@bugsnag/electron-filestore](https://socket.dev/npm/package/@bugsnag/electron-filestore),
 [Sentry Electron offline support](https://docs.sentry.io/platforms/javascript/guides/electron/features/offline-support).
+
+## What "Inspect this app" can and cannot reach (R2, tested 2026-11-14)
+
+| Traffic | How it can be read | Tested |
+|---|---|---|
+| Chromium and Electron apps, browser side | `--log-net-log` with capture mode Everything: addresses, headers, bodies | Yes: Chrome, VS Code |
+| Firefox | `MOZ_LOG=timestamp,nsHttp:3` with `MOZ_LOG_FILE`: address and headers of every request, no bodies. Needs Firefox closed (or a separate profile) | Yes: 398 requests logged in 15 seconds by a headless temporary profile |
+| Firefox name lookups | Firefox sends them encrypted to `mozilla.cloudflare-dns.com` (DNS over HTTPS), which is why the watcher has no names for much of Firefox's traffic | Seen in the same log |
+| Node.js requests inside Electron apps (main process, `https` module) | Not in Chromium's log. Reachable only where the app leaves Electron's `NodeOptionsEnvironmentVariable` fuse on: `NODE_OPTIONS=--require <logger>` can record each request from inside the app | Fuses read from the program files: VS Code and Discord on; Claude off |
+
+The Node.js route runs code inside the app, so if it is built it must be opt-in per app and say so.
