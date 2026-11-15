@@ -162,3 +162,27 @@ Sources: [Unity CrashReporting.crashReportFolder](https://docs.unity3d.com/Scrip
 | Node.js requests inside Electron apps (main process, `https` module) | Not in Chromium's log. Reachable only where the app leaves Electron's `NodeOptionsEnvironmentVariable` fuse on: `NODE_OPTIONS=--require <logger>` can record each request from inside the app | Fuses read from the program files: VS Code and Discord on; Claude off |
 
 The Node.js route runs code inside the app, so if it is built it must be opt-in per app and say so.
+
+## Naming encrypted traffic (R3, 2026-11-14)
+
+On the dev PC, 92% of the bytes on TCP port 443 and 77% on UDP port 443 (QUIC) went to addresses
+with no recorded name. The causes: lookups made before the watcher started, apps that cache
+answers, and encrypted DNS (Firefox uses Cloudflare's).
+
+The name is also sent in clear text at the start of almost every TLS connection, in the
+ClientHello "server name" field. `capture/packets.py` can already read it (`tls_server_name`), but
+the watcher's Packet Monitor filter only passes DNS (port 53), so it never sees a ClientHello.
+
+| Option | Cost | Verdict |
+|---|---|---|
+| Capture all TCP 443 packets | Millions of packets a day, thousands per second during downloads; Packet Monitor cannot select only the first data packet of a connection | Too heavy to run all the time |
+| **Short sampling windows**: TCP 443 at about 1,600 bytes per packet for 1-2 minutes, when addresses without names appear or every 30 minutes | Bounded; most connections are reused for minutes, and new ones are opened often | **Chosen for 4.3** |
+| QUIC Initial packets (UDP 443) | Their protection uses public keys derived from the connection ID, so the name can be read, but it needs AES-GCM and HKDF (the `cryptography` package) | Later, as an addition |
+| Encrypted Client Hello | Chrome and Firefox hide the real name for sites that support it (many Cloudflare sites); only an outer name such as `cloudflare-ech.com` is visible | Label it as "hidden by the site" instead of unknown |
+
+Two parsing details for 4.3: Chrome puts its extensions in random order, and post-quantum key
+shares make its ClientHello about 1,800 bytes, so the name can be in the second TCP segment. The
+first two segments of each connection must be joined before reading.
+
+Turning this on changes the elevated helper's capture, so it waits for a helper restart with
+Tobiah present; 4.3 builds and tests the code.
