@@ -66,6 +66,79 @@ def com_class_name(clsid: str) -> str | None:
     return None
 
 
+INTERPRETERS = {"python.exe", "pythonw.exe", "py.exe", "node.exe", "java.exe", "javaw.exe", "ruby.exe", "perl.exe",
+                "deno.exe", "bun.exe", "php.exe"}
+_PROJECT_MARKERS = ("pyproject.toml", "package.json", "setup.py", ".git", "Cargo.toml", "pom.xml", "build.gradle")
+
+
+def _args(cmdline: str) -> list[str]:
+    import shlex
+
+    try:
+        return shlex.split(cmdline.replace("\\", "/"), posix=True)
+    except ValueError:
+        return cmdline.replace("\\", "/").split()
+
+
+def _project_root(path: str) -> str | None:
+    """The nearest folder above `path` that looks like a project, or None."""
+    folder = os.path.dirname(os.path.normpath(path))
+    for _ in range(6):
+        if not folder or os.path.dirname(folder) == folder:
+            return None
+        if any(os.path.exists(os.path.join(folder, marker)) for marker in _PROJECT_MARKERS):
+            return folder
+        folder = os.path.dirname(folder)
+    return None
+
+
+def script_identity(exe: str, cmdline: str) -> dict | None:
+    """What an interpreter (Python, Node, Java...) is running: the program a person would name.
+
+    "python.exe" says nothing: the same interpreter runs this tool, a project's local server and
+    one-off scripts. The actor becomes the module, script or project instead.
+    """
+    text = (cmdline or "").lower().replace("\\", "/")
+    exe_text = (exe or "").lower().replace("\\", "/")
+    if "appaudit" in text or "/hackathon/.venv/" in exe_text and ("-m appaudit" in text or "uvicorn" in text):
+        return {"id": "self:appaudit", "name": "App Audit (this tool)", "kind": "self", "is_system": False,
+                "role": "This tool: the dashboard or the watcher", "publisher": None}
+    if "/temp/claude/" in text and "/scratchpad" in text:
+        return {"id": "script:claude-code", "name": "Scripts run by Claude Code", "kind": "script", "is_system": False,
+                "role": "Developer tool: scripts an AI coding assistant ran on this PC", "publisher": None}
+    args = _args(cmdline)[1:]
+    module = None
+    script = None
+    for index, arg in enumerate(args):
+        if arg == "-m" and index + 1 < len(args):
+            module = args[index + 1]
+            break
+        if arg in ("-c", "-"):
+            break
+        if not arg.startswith("-"):
+            script = arg
+            break
+    venv = None
+    if "/.venv/" in exe_text or "/venv/" in exe_text:
+        venv = exe.replace("\\", "/").lower().split("/.venv/")[0].split("/venv/")[0]
+    root = venv or (_project_root(script) if script and os.path.isabs(script) else None)
+    if module:
+        label = module.split(".")[0]
+        project = os.path.basename(root.rstrip("/\\")) if root else None
+        name = f"{label} ({project})" if project and project.lower() != label.lower() else label
+        return {"id": f"script:module:{label.lower()}:{(project or '').lower()}", "name": f"Python program: {name}",
+                "kind": "script", "is_system": False, "role": "Script or local program", "publisher": None}
+    if root:
+        project = os.path.basename(os.path.normpath(root))
+        return {"id": f"script:project:{os.path.normcase(root)}", "name": f"Project: {project}", "kind": "script",
+                "is_system": False, "role": "Script or local program", "publisher": None}
+    if script:
+        base = os.path.basename(script)
+        return {"id": f"script:file:{base.lower()}", "name": f"Script: {base}", "kind": "script", "is_system": False,
+                "role": "Script or local program", "publisher": None}
+    return None
+
+
 class Attributor:
     def __init__(self, resolver: Resolver | None = None) -> None:
         self.resolver = resolver or Resolver()
@@ -94,7 +167,7 @@ class Attributor:
     @staticmethod
     def _cmdline_key(proc: dict) -> str | None:
         name = (proc.get("name") or "").lower()
-        if name in ("dllhost.exe", "rundll32.exe", "msedgewebview2.exe", "backgroundtaskhost.exe"):
+        if name in ("dllhost.exe", "rundll32.exe", "msedgewebview2.exe", "backgroundtaskhost.exe") or name in INTERPRETERS:
             return proc.get("cmdline")
         return None
 
@@ -135,6 +208,10 @@ class Attributor:
             match = _WEBVIEW_HOST.search(cmdline)
             if match:
                 actor["on_behalf_of"] = match.group(1).strip('"')
+        elif lowered in INTERPRETERS:
+            script = script_identity(exe or "", cmdline)
+            if script:
+                actor.update(script)
         elif lowered == "backgroundtaskhost.exe" and proc.get("package"):
             ref = self.resolver._package_ref(_family_from_full_name(proc["package"]))
             actor.update(id=ref.id, name=ref.name, publisher=ref.publisher, kind=ref.kind, is_system=ref.is_system,

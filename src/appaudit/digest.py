@@ -11,6 +11,9 @@ import time
 from collections import Counter
 
 from . import activity, livestore, proof, store
+from .attribution import INTERPRETERS
+
+DEV_TOOLS = {"uv.exe", "pip.exe", "pytest.exe", "npm.exe", "npx.exe", "cargo.exe", "git.exe"}
 from .explain import components
 from .naming import labels
 
@@ -56,6 +59,8 @@ def build(hours: float = 12) -> dict:
     website_tracking = []
     idle_but_active = []
     for actor in snapshot["actors"]:
+        if actor.get("kind") == "self":                 # App Audit's own traffic is not a finding
+            continue
         if actor["reporting_sent"]:
             targets = [d["name"] or d["address"] for d in actor["destinations"]
                        if d["category"] in labels.REPORTING and not d.get("via_websites")][:4]
@@ -65,7 +70,8 @@ def build(hours: float = 12) -> dict:
             website_tracking.append({"name": actor["name"], "sent": actor["website_tracking_sent"],
                                      "companies": actor.get("website_trackers", [])[:6]})
         app = apps.get(actor["id"])
-        if app and not actor["is_system"]:
+        # Interpreters (Python, Node...) are not opened by people; what they run is named separately.
+        if app and not actor["is_system"] and not {name.lower() for name in actor["processes"]} & (INTERPRETERS | DEV_TOOLS):
             days = app.get("days_unused")
             never = app.get("usage") is None and not app.get("used_undated")
             starts_itself = bool(app.get("autostart_enabled"))
