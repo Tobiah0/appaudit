@@ -173,7 +173,7 @@ def test_reporting_from_counts_only_reporting_destinations_and_ignores_separate_
     add_flow(conn, 900, "Code.exe", "192.0.2.1", 700, now - 2 * HOUR)               # telemetry: counts
     add_flow(conn, 901, "Code.exe", "192.0.2.2", 5000, now - 2 * HOUR)              # marketplace: does not
     add_flow(conn, 902, "Code.exe", "192.0.2.1", 9000, now - 2 * HOUR)              # blank-profile test run
-    conn.execute("UPDATE procs SET cmdline = 'Code.exe --user-data-dir=C:\Temp\p' WHERE id = 902")
+    conn.execute("UPDATE procs SET cmdline = 'Code.exe --user-data-dir=C:/Temp/p' WHERE id = 902")
     expect = {"reporting_from": {"processes": ["code.exe"]}}
     proof.validate_expect(expect, "t")
     mark = proof.footprint(conn, expect, now - 5 * HOUR, now)
