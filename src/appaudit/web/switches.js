@@ -6,8 +6,25 @@ const sw = { data: null, search: "", show: "exposed", planFor: null, plan: null,
 
 const STATE_LABEL = {
   private: ["private", "Off (private)"], exposed: ["exposed", "On"], partly: ["exposed", "Partly on"],
-  not_installed: ["na", "Not on this PC"], unknown: ["na", "Could not read"],
+  not_installed: ["na", "Not on this PC"], unknown: ["na", "Could not read"], manual: ["na", "Steps to follow"],
 };
+
+// A unified diff with added and removed lines marked, so the change can be checked line by line.
+function diffView(text) {
+  const lines = text.replace(/\r/g, "").split("\n");
+  if (lines[lines.length - 1] === "") lines.pop();
+  return el("pre", { class: "plan" }, lines.map((line) => {
+    const kind = line.startsWith("+++") || line.startsWith("---") || line.startsWith("@@") ? "meta"
+      : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : "ctx";
+    return el("span", { class: kind, text: line || " " });
+  }));
+}
+
+function stepsView(steps) {
+  return el("ol", { class: "steps" }, steps.map((step) => el("li", {},
+    el("strong", { text: step.name }), " ", el("span", { text: step.description }),
+    step.link ? [" ", el("a", { href: step.link, target: "_blank", rel: "noreferrer", text: "Open" })] : null)));
+}
 
 function buildSwitchPage() {
   const page = $("#page-switches");
@@ -40,17 +57,44 @@ function valueText(value) {
 
 function planPanel(item) {
   if (sw.planFor !== item.id || !sw.plan) return null;
-  if (!sw.plan.length) return el("pre", { class: "plan", text: "Nothing to change: every part is already off." });
-  const lines = sw.plan.map((change) =>
-    `${change.what}\n    now: ${valueText(change.before)}   ->   after: ${valueText(change.after)}`
-    + (change.admin ? "   (needs administrator rights)" : "")).join("\n");
-  const apply = el("button", { type: "button", class: "primary small", text: sw.busy ? "Applying…" : "Apply these changes" });
-  apply.disabled = sw.busy;
-  apply.addEventListener("click", () => applySwitch(item));
+  return planView(item, sw.plan, sw.busy, () => applySwitch(item),
+    () => { sw.planFor = null; sw.plan = null; renderSwitches(); });
+}
+
+// The exact changes a switch would make, and the buttons to apply or cancel them. Used on the
+// Switches page and in each app's view on the Activity page.
+function planView(item, plan, busy, onApply, onCancel) {
+  if (plan.error) return el("div", { class: "notice warn", text: plan.error });
+  if (!plan.length) return el("pre", { class: "plan", text: "Nothing to change: every part is already off." });
+  const settings = plan.filter((change) => !change.file);
+  const files = new Map();                      // one diff per file: the last change carries the full edit
+  for (const change of plan.filter((c) => c.file)) files.set(change.file, change);
+  const parts = [];
+  if (settings.length) {
+    parts.push(el("pre", { class: "plan", text: settings.map((change) =>
+      `${change.what}\n    now: ${valueText(change.before)}   ->   after: ${valueText(change.after)}`
+      + (change.admin ? "   (needs administrator rights)" : "")).join("\n") }));
+  }
+  for (const [file, change] of files) {
+    parts.push(el("div", { class: "sub", style: "margin-top:8px",
+      text: change.exists ? `This file will be changed. A copy of it is kept first, so Undo puts it back exactly: ${file}`
+        : `This file does not exist yet and will be created; Undo removes it again: ${file}` }));
+    parts.push(diffView(change.diff));
+    if (change.running.length) {
+      parts.push(el("div", { class: "warn", style: "margin-top:6px",
+        text: `${change.running.join(", ")} is running. Close it first: some apps write their old settings back when they exit.` }));
+    }
+  }
+  if (item.origin && item.origin !== "catalogue") {
+    parts.push(el("div", { class: "sub", style: "margin-top:6px",
+      text: "This switch comes from a community list, not from this tool's own catalogue. Check the change above before applying it." }));
+  }
+  const apply = el("button", { type: "button", class: "primary small", text: busy ? "Applying…" : "Apply these changes" });
+  apply.disabled = busy;
+  apply.addEventListener("click", (event) => { event.stopPropagation(); onApply(); });
   const cancel = el("button", { type: "button", class: "small", text: "Cancel" });
-  cancel.addEventListener("click", () => { sw.planFor = null; sw.plan = null; renderSwitches(); });
-  return el("div", {}, el("pre", { class: "plan", text: lines }),
-    el("div", { style: "margin-top:8px; display:flex; gap:8px" }, apply, cancel));
+  cancel.addEventListener("click", (event) => { event.stopPropagation(); onCancel(); });
+  return el("div", {}, parts, el("div", { style: "margin-top:8px; display:flex; gap:8px" }, apply, cancel));
 }
 
 function switchRow(item) {
@@ -68,11 +112,17 @@ function switchRow(item) {
     button.addEventListener("click", () => previewSwitch(item));
     actions.push(button);
   }
+  if (item.origin && item.origin !== "catalogue") tags.push(el("span", { class: "chip tag", text: "From a community list" }));
   const checks = item.checks.length ? el("details", {}, el("summary", { class: "sub", text: "What it checks" }),
     el("pre", { class: "plan", text: item.checks.map((c) => `${c.state.padEnd(8)} ${c.what}   (now: ${valueText(c.current)})`).join("\n") })) : null;
+  // Settings only the app or the vendor's website can change: the steps are the action.
+  const steps = item.steps && item.steps.length ? (item.checks.length
+    ? el("details", {}, el("summary", { class: "sub", text: "Other ways to turn it off" }), stepsView(item.steps))
+    : el("div", {}, el("div", { class: "sub", style: "margin-top:6px", text: "This tool cannot change this setting. Turn it off yourself:" }),
+      stepsView(item.steps))) : null;
   return el("div", { class: "row" },
     el("div", { class: "grow" }, el("div", { class: "name", text: item.title }), el("div", { text: item.explain }),
-      facts, tags.length ? el("div", { style: "margin-top:4px" }, tags) : null, checks, planPanel(item)),
+      facts, tags.length ? el("div", { style: "margin-top:4px" }, tags) : null, checks, steps, planPanel(item)),
     el("div", { style: "text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end" },
       el("span", { class: `state ${kind}`, text: label }), actions));
 }
@@ -91,7 +141,8 @@ function journalView(entries) {
     return el("div", { class: "row" },
       el("div", { class: "grow" }, el("div", { class: "name", text: item.title }),
         el("div", { class: "sub", text: new Date(entry.applied * 1000).toLocaleString() }),
-        el("pre", { class: "plan", text: entry.changes.map((c) => `${c.what}\n    was: ${valueText(c.before)}   set to: ${valueText(c.after)}`).join("\n") })),
+        el("pre", { class: "plan", text: entry.changes.map((c) => `${c.what}\n    was: ${valueText(c.before)}   set to: ${valueText(c.after)}`
+          + (c.backup ? `\n    copy of the file before the change: ${c.backup}` : "")).join("\n") })),
       entry.undone ? el("span", { class: "state na", text: "Undone" }) : undo);
   }))];
 }
@@ -121,7 +172,7 @@ function renderSwitches() {
   const needle = sw.search.trim().toLowerCase();
   const groups = new Map();
   for (const item of sw.data.switches) {
-    if (sw.show === "exposed" && !["exposed", "partly"].includes(item.state)) continue;
+    if (sw.show === "exposed" && !["exposed", "partly", "manual"].includes(item.state)) continue;
     if (sw.show === "private" && item.state !== "private") continue;
     if (needle && !`${item.title} ${item.explain} ${item.group} ${item.id}`.toLowerCase().includes(needle)) continue;
     if (!groups.has(item.group)) groups.set(item.group, []);
@@ -134,21 +185,32 @@ function renderSwitches() {
 
 async function previewSwitch(item) {
   sw.planFor = item.id;
-  sw.plan = (await (await fetch(`/api/switches/${encodeURIComponent(item.id)}/plan`)).json()).plan;
+  sw.plan = await fetchPlan(item);
   renderSwitches();
+}
+
+async function fetchPlan(item) {
+  const response = await fetch(`/api/switches/${encodeURIComponent(item.id)}/plan`);
+  const body = await response.json();
+  return response.ok ? body.plan : { error: body.detail || "The change could not be prepared." };
+}
+
+// Apply a switch and describe the outcome in one sentence.
+async function applyAndDescribe(item) {
+  const response = await post(`/api/switches/${encodeURIComponent(item.id)}/apply`);
+  const body = await response.json();
+  if (!response.ok) return `Not applied: ${body.detail}`;
+  if (body.failed.length) return `${item.title}: ${body.changed.length} changed, ${body.failed.length} refused (${body.failed[0].error}).`;
+  return `${item.title} is now off. Undo it on the Switches page under "Changes made". The Proof page will show whether its traffic stops.`;
 }
 
 async function applySwitch(item) {
   sw.busy = true;
   renderSwitches();
-  const response = await post(`/api/switches/${encodeURIComponent(item.id)}/apply`);
-  const body = await response.json();
+  sw.message = await applyAndDescribe(item);
   sw.busy = false;
   sw.planFor = null;
   sw.plan = null;
-  if (!response.ok) sw.message = `Not applied: ${body.detail}`;
-  else if (body.failed.length) sw.message = `${item.title}: ${body.changed.length} changed, ${body.failed.length} refused by Windows (${body.failed[0].error}).`;
-  else sw.message = `${item.title} is now off. Undo it under "Changes made". The Proof page will show whether its traffic stops.`;
   await loadSwitches();
 }
 

@@ -183,9 +183,11 @@ function actorDetail(actor) {
   return el("tr", { class: "detail" }, el("td", { colspan: "6" },
     el("div", { style: "float:right" }, dismissButton("actor", actor.id, actor.name)),
     el("ul", { class: "facts" }, facts),
-    blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
-      el("div", { class: "sub", text: "Adds an outgoing block rule for the program in Windows Firewall. You can remove it here or in Windows." }), blockRows) : null,
+    reportingSection(actor),
     sdkSection(actor), askSection(actor),
+    blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
+      el("div", { class: "sub", text: "Last resort: stops all of the program's internet traffic, which usually stops the app working. "
+        + "Adds an outgoing block rule in Windows Firewall; you can remove it here or in Windows." }), blockRows) : null,
     el("p", { class: "sub", text: "Select a destination to see what a message to it looks like." }),
     el("div", { class: "scroll" }, el("table", { class: "inner" },
       el("thead", {}, el("tr", {}, ["Destination", "Company", "Kind", "What it is for", "Sent", "Received", "Last"].map((t) => el("th", { text: t })))),

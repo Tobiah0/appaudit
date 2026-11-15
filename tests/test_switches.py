@@ -10,14 +10,15 @@ def test_catalogue_loads_and_is_valid():
     catalogue = switches.load_catalogue()
     assert len(catalogue) >= 100
     for item in catalogue.values():
-        assert item.title and item.explain and item.checks, item.id
+        assert item.title and (item.checks or item.steps), item.id
+        assert item.origin != "catalogue" or item.explain, item.id
         assert item.risk in ("low", "medium", "high"), item.id
 
 
 def test_every_switch_can_be_read_on_this_pc():
     backend = SandboxBackend()
     states = [switches.state(item, backend) for item in switches.load_catalogue().values()]
-    assert {entry["state"] for entry in states} <= {"private", "exposed", "partly", "not_installed", "unknown"}
+    assert {entry["state"] for entry in states} <= {"private", "exposed", "partly", "not_installed", "unknown", "manual"}
     assert not [entry["id"] for entry in states if entry["state"] == "unknown"]
 
 

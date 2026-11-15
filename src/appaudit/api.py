@@ -196,11 +196,34 @@ def get_switches() -> dict:
     return cached(("switches",), 4, build)
 
 
-@app.get("/api/switches/{switch_id}/plan")
-def get_switch_plan(switch_id: str) -> dict:
+def _plan(switch) -> list[dict]:
     from . import switches
 
-    return {"plan": switches.plan(_switch(switch_id))}
+    try:
+        return switches.plan(switch)
+    except ValueError as error:          # a settings file that cannot be changed safely
+        raise HTTPException(409, f"Nothing was changed: {error}. The file is not in a form this tool "
+                                 "can edit safely; use the steps or change it in the app.") from error
+
+
+@app.get("/api/switches/for-app")
+def get_switches_for_app(actor: str) -> dict:
+    """The switches that concern one app on the Activity page, with their current state."""
+    from . import switches
+
+    found = _actor(actor)
+    programs = set(found.get("exes") or [])
+    services = {item["name"] for item in found.get("services") or [] if item.get("name")}
+    states = [switches.state(item) for item in switches.for_app(programs, services)]
+    order = {"exposed": 0, "partly": 0, "manual": 1, "unknown": 2, "private": 3}
+    states = sorted((item for item in states if item["state"] != "not_installed"),
+                    key=lambda item: (order.get(item["state"], 4), item["origin"] != "catalogue", item["title"]))
+    return {"switches": states}
+
+
+@app.get("/api/switches/{switch_id}/plan")
+def get_switch_plan(switch_id: str) -> dict:
+    return {"plan": _plan(_switch(switch_id))}
 
 
 @app.post("/api/switches/{switch_id}/apply")
@@ -208,7 +231,7 @@ def post_switch_apply(switch_id: str) -> dict:
     from . import switches
 
     switch = _switch(switch_id)
-    planned = switches.plan(switch)
+    planned = _plan(switch)
     result = {"changed": [], "failed": [], "journal_ids": []}
     if any(change["admin"] for change in planned):
         reply = _helper({"cmd": "switch_apply", "id": switch_id})

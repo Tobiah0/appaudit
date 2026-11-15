@@ -5,6 +5,7 @@
 Sources and licences:
   iptoasn.com               address ranges to network owner   public domain (PDDL)
   hagezi/dns-blocklists     tracker and vendor-telemetry lists GPL-3.0
+  beatcracker/toptout       telemetry opt-outs per product     MIT (see switches/toptout.py)
 The files are used as data at run time and are not redistributed with the code.
 """
 
@@ -53,3 +54,9 @@ def fetch(force: bool = False) -> dict[str, str]:
 if __name__ == "__main__":
     for name, outcome in fetch().items():
         print(f"{name}: {outcome}")
+    from ..switches import toptout
+
+    try:
+        print(f"toptout opt-out database: {toptout.fetch()}")
+    except Exception as error:  # noqa: BLE001 - the product works without it
+        print(f"toptout opt-out database: failed: {error}")

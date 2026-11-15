@@ -127,6 +127,79 @@ function exampleRow(actor, destination) {
   return el("tr", { class: "example-row" }, el("td", { colspan: "7" }, blocks));
 }
 
+// --- turning off the app's reporting --------------------------------------------------------------
+// The switches that concern this app (its own settings, policies, config files and steps), with
+// the same exact-change preview as the Switches page.
+
+const reporting = { byActor: new Map(), open: null, plan: null, busy: false, message: null };
+
+async function loadReporting(actor) {
+  const response = await fetch(`/api/switches/for-app?actor=${encodeURIComponent(actor.id)}`);
+  const body = await response.json();
+  reporting.byActor.set(actor.id, response.ok ? body.switches : { error: body.detail || "Could not read the switches." });
+  renderLive();
+}
+
+function reportingRow(actor, item) {
+  const [kind, label] = STATE_LABEL[item.state] || ["na", item.state];
+  const key = `${actor.id}|${item.id}`;
+  const actions = [];
+  if (item.state === "exposed" || item.state === "partly") {
+    const button = el("button", { type: "button", class: "small", text: reporting.open === key ? "Hide the change" : "Switch off…" });
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      if (reporting.open === key) { reporting.open = null; renderLive(); return; }
+      reporting.open = key;
+      reporting.plan = null;
+      renderLive();
+      reporting.plan = await fetchPlan(item);
+      renderLive();
+    });
+    actions.push(button);
+  }
+  let detail = null;
+  if (reporting.open === key) {
+    detail = !reporting.plan ? el("div", { class: "sub", text: "Preparing the change…" })
+      : planView(item, reporting.plan, reporting.busy, async () => {
+        reporting.busy = true;
+        renderLive();
+        reporting.message = { actor: actor.id, text: await applyAndDescribe(item) };
+        reporting.busy = false;
+        reporting.open = null;
+        await loadReporting(actor);
+      }, () => { reporting.open = null; renderLive(); });
+  }
+  const steps = item.steps && item.steps.length && !item.checks.length ? stepsView(item.steps) : null;
+  return el("div", { class: "row" },
+    el("div", { class: "grow" }, el("div", { class: "name", text: item.title }),
+      el("div", { class: "sub", text: item.explain }),
+      item.breaks ? el("div", { class: "sub", text: `If you switch it off: ${item.breaks}` }) : null,
+      item.origin !== "catalogue" ? el("div", { class: "sub", text: "From a community list" }) : null,
+      steps, detail),
+    el("div", { style: "text-align:right; display:flex; flex-direction:column; gap:6px; align-items:flex-end" },
+      el("span", { class: `state ${kind}`, text: label }), actions));
+}
+
+function reportingSection(actor) {
+  const data = reporting.byActor.get(actor.id);
+  if (data === undefined) {
+    reporting.byActor.set(actor.id, null);
+    loadReporting(actor);
+  }
+  const card = el("div", { class: "card" }, el("h2", { text: "Turn off its reporting" }));
+  if (!data) { card.append(el("div", { class: "sub", text: "Looking for this app's settings…" })); return card; }
+  if (data.error) { card.append(el("div", { class: "none", text: data.error })); return card; }
+  if (reporting.message && reporting.message.actor === actor.id) card.append(el("div", { class: "notice", text: reporting.message.text }));
+  if (!data.length) {
+    card.append(el("div", { class: "sub", text: "No known setting turns off this app's reporting. Blocking it is the remaining option, "
+      + "and that usually stops the app working too." }));
+    return card;
+  }
+  card.append(el("div", { class: "sub", text: "The app's own settings. Each change is shown exactly before it is made, and can be undone." }),
+    ...data.map((item) => reportingRow(actor, item)));
+  return card;
+}
+
 // --- components built into the app ----------------------------------------------------------------
 
 async function loadSdks(actor, scan) {

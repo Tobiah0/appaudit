@@ -153,6 +153,13 @@ ul.facts li { margin-bottom: 4px; }
 button.small { padding: 4px 10px; font-size: 12.5px; }
 button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); font-weight: 600; }
 pre.plan { background: var(--chip); border-radius: 8px; padding: 10px 12px; font: 12px/1.5 "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; word-break: break-all; margin: 8px 0 0; }
+pre.plan .add, pre.plan .del, pre.plan .meta, pre.plan .ctx { display: block; }
+pre.plan .add { background: var(--ok-soft); color: var(--ok); }
+pre.plan .del { background: var(--accent-soft); color: var(--accent); }
+pre.plan .meta { color: var(--muted); }
+.steps { margin: 8px 0 0; padding-left: 20px; }
+.steps li { margin-bottom: 6px; }
+.notice.warn, .warn { color: var(--accent); }
 
 /* --- column layout ------------------------------------------------------------------
    Every table uses fixed column widths, so columns line up from row to row and long
