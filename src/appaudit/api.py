@@ -206,6 +206,28 @@ def _plan(switch) -> list[dict]:
                                  "can edit safely; use the steps or change it in the app.") from error
 
 
+@app.get("/api/app-details")
+def get_app_details(actor: str, hours: float = 168) -> dict:
+    """Everything already recorded about one app (destinations, timeline, requests, history...)."""
+    from . import appdetail
+
+    _actor(actor)
+    hours = min(max(hours, 1), 24 * 30)
+    return cached(("details", actor, hours), 15, lambda: appdetail.details(actor, hours))
+
+
+@app.get("/api/app-ondisk")
+def get_app_ondisk(actor: str) -> dict:
+    """What the app keeps on disk to send: crash-reporter state, queued reports, crash dumps."""
+    from . import ondisk
+
+    found = _actor(actor)
+    exes = [exe for exe in found.get("exes") or [] if not exe.lower().startswith(("c:\\windows\\",))]
+    if not exes:
+        return {"roots": [], "sources": [], "complete": True, "system": True}
+    return cached(("ondisk", actor), 30, lambda: ondisk.for_app(exes, found.get("name") or "", found.get("publisher") or ""))
+
+
 @app.get("/api/switches/for-app")
 def get_switches_for_app(actor: str) -> dict:
     """The switches that concern one app on the Activity page, with their current state."""

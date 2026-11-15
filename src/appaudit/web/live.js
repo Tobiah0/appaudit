@@ -184,7 +184,7 @@ function actorDetail(actor) {
     el("div", { style: "float:right" }, dismissButton("actor", actor.id, actor.name)),
     el("ul", { class: "facts" }, facts),
     reportingSection(actor),
-    sdkSection(actor), askSection(actor),
+    sdkSection(actor), ondiskSection(actor), recordsSection(actor), askSection(actor),
     blockRows.length ? el("div", { class: "card" }, el("h2", { text: "Network block" }),
       el("div", { class: "sub", text: "Last resort: stops all of the program's internet traffic, which usually stops the app working. "
         + "Adds an outgoing block rule in Windows Firewall; you can remove it here or in Windows." }), blockRows) : null,
