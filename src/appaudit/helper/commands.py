@@ -20,6 +20,10 @@ class Commands:
             "switch_undo": self._switch_undo,
             "block_add": self._block_add,
             "block_remove": self._block_remove,
+            "stop_address_add": self._stop_address_add,
+            "stop_name_add": self._stop_name_add,
+            "stop_remove": self._stop_remove,
+            "stop_refresh": self._stop_refresh,
             "history_refresh": lambda _request: history.refresh(),
             "trace_sessions": lambda _request: inspect.trace_sessions(),
             "windows_telemetry": lambda _request: inspect.windows_telemetry(),
@@ -67,6 +71,43 @@ class Commands:
         from .. import blocks
 
         return blocks.remove(int(request["id"]))
+
+    # Stopping one destination (STOPPING.md). The request names a program and a host this PC already
+    # used; stops.py looks everything else up and checks it again. Refused while real stops are off.
+    def _stop_address_add(self, request: dict) -> dict:
+        from .. import livestore, stops
+
+        backend = stops.backend_for_real()
+        conn = livestore.connect(readonly=True)
+        try:
+            return stops.add_address_block(conn, str(request.get("exe", "")), str(request.get("name", "")), backend)
+        finally:
+            conn.close()
+
+    def _stop_name_add(self, request: dict) -> dict:
+        from .. import livestore, stops
+
+        backend = stops.backend_for_real()
+        conn = livestore.connect(readonly=True)
+        try:
+            return stops.add_name_block(conn, str(request.get("name", "")), backend)
+        finally:
+            conn.close()
+
+    def _stop_remove(self, request: dict) -> dict:
+        from .. import stops
+
+        return stops.remove(int(request["id"]), stops.backend_for_real())
+
+    def _stop_refresh(self, _request: dict) -> dict:
+        from .. import livestore, stops
+
+        backend = stops.backend_for_real()
+        conn = livestore.connect(readonly=True)
+        try:
+            return {"refreshed": stops.refresh_addresses(conn, backend)}
+        finally:
+            conn.close()
 
     def _packets(self, request: dict) -> dict:
         if request.get("on"):
