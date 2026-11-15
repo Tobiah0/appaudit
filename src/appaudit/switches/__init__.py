@@ -118,6 +118,10 @@ def load_catalogue() -> dict[str, Switch]:
 
     for switch in toptout.load(covered):
         switches.setdefault(switch.id, switch)
+    from . import startup
+
+    for switch in startup.load():
+        switches.setdefault(switch.id, switch)
     return switches
 
 
@@ -190,12 +194,15 @@ def _validate(check: dict, switch_id: str) -> None:
     kind = check.get("type")
     required = {"registry": ("hive", "key", "value", "private"), "service": ("name", "private"),
                 "task": ("path", "private"), "env": ("name", "private"),
-                "file": ("path", "format", "private")}.get(kind)
+                "file": ("path", "format", "private"),
+                "startup_approved": ("hive", "approved", "value", "private")}.get(kind)
     if required is None:
         raise ValueError(f"{switch_id}: unknown check type {kind!r}")
     missing = [name for name in required if name not in check]
     if missing:
         raise ValueError(f"{switch_id}: {kind} check is missing {missing}")
+    if kind == "startup_approved" and (check["hive"] not in ("HKCU", "HKLM") or check["approved"] not in ("Run", "Run32", "StartupFolder")):
+        raise ValueError(f"{switch_id}: startup_approved needs hive HKCU/HKLM and approved Run, Run32 or StartupFolder")
     if kind == "registry" and check["hive"] not in ("HKCU", "HKLM"):
         raise ValueError(f"{switch_id}: hive must be HKCU or HKLM")
     if kind == "file":
@@ -225,6 +232,8 @@ def read_check(check: dict, backend) -> object:
         return backend.task_get(check["path"])
     if kind == "file":
         return configfile.read(backend.file_read(backend.expand(check["path"])), check)
+    if kind == "startup_approved":
+        return backend.startup_get(check["hive"], check["approved"], check["value"])
     return backend.env_get(check["name"])
 
 
@@ -236,6 +245,8 @@ def check_state(check: dict, current) -> str:
         if "default" not in check:
             return "exposed"                         # value not set, and the Windows default is "on"
         current = check["default"]
+    if check["type"] == "startup_approved":          # Task Manager's flag: an odd first byte means disabled
+        return "private" if current and int(str(current)[:2], 16) % 2 == 1 else "exposed"
     if check.get("private_any"):                     # any non-empty value turns it off
         return "private" if str(current).strip() else "exposed"
     private = check["private"]
@@ -315,6 +326,8 @@ def describe_check(check: dict) -> str:
         return f"Service {check['name']} start type = {_first(check['private'])}"
     if kind == "task":
         return f"Scheduled task {check['path']} = {_first(check['private'])}"
+    if kind == "startup_approved":
+        return f"Startup entry \"{check['value']}\" ({check['hive']} {check['approved']}) = disabled, as Task Manager does it"
     if kind == "file":
         where = " > ".join(check["keys"]) if check["format"] == "json" else \
             (f"[{check['section']}] " if check.get("section") else "") + check["key"]
@@ -368,6 +381,8 @@ def write_check(check: dict, value, backend) -> None:
         backend.service_set(check["name"], value)
     elif kind == "task":
         backend.task_set(check["path"], value)
+    elif kind == "startup_approved":
+        backend.startup_set(check["hive"], check["approved"], check["value"], value)
     elif kind == "file":
         path = backend.expand(check["path"])
         backend.file_write(path, configfile.edit(backend.file_read(path), check, value))
@@ -403,7 +418,7 @@ def plan(switch: Switch, backend=None) -> list[dict]:
             continue
         change = {"check": index, "what": describe_check(check), "before": current,
                   "after": _first(check["private"]), "admin": check["type"] in ADMIN_TYPES
-                  or check.get("hive") == "HKLM"}
+                  or check.get("hive") == "HKLM", "check_def": check}
         if check["type"] == "file":
             path = backend.expand(check["path"])
             original = backend.file_read(path)
@@ -468,14 +483,17 @@ def undo(entry_id: int, backend=None, journal_file: Path | None = None, only_adm
         raise KeyError(f"no journal entry {entry_id}")
     changes = json.loads(row["changes"])
     switch = load_catalogue().get(row["switch_id"])
-    if switch is None and not all(change.get("check_def") for change in changes):
+    # A switch generated from the inventory can leave the catalogue; its user-level changes are undone
+    # from the journal's copy of the check. Administrator changes always come from the catalogue: the
+    # journal sits in a file the user's programs can write.
+    if switch is None and not all(change.get("check_def") and not change["admin"] for change in changes):
         raise KeyError(f"switch {row['switch_id']} is no longer in the catalogue")
     restored, failed = [], []
     files_restored: set[str] = set()
     for change in changes:
         if only_admin is not None and change["admin"] != only_admin:
             continue
-        check = change.get("check_def") or switch.checks[change["check"]]
+        check = switch.checks[change["check"]] if switch is not None else change["check_def"]
         try:
             path = change.get("file")
             if path and path in files_restored:

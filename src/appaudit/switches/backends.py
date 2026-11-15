@@ -232,6 +232,35 @@ class RealBackend:
         """Programs running now or seen by the watcher: evidence that an app is installed and used."""
         return _known_processes()
 
+    # -- startup entries (Task Manager's StartupApproved flag) --------------------------
+    # The value is 12 bytes: 02 enabled / 03 disabled, padding, then when it was switched. It is
+    # handled as a hex string so the journal can put back exactly what was there.
+    APPROVED = r"Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved"
+
+    def startup_get(self, hive: str, approved: str, name: str):
+        try:
+            with winreg.OpenKey(HIVES[hive], self.APPROVED + "\\" + approved, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as handle:
+                data = winreg.QueryValueEx(handle, name)[0]
+        except FileNotFoundError:
+            return None
+        return bytes(data).hex() if data else None
+
+    def startup_set(self, hive: str, approved: str, name: str, value) -> None:
+        if value == "disabled":
+            stamp = int((time.time() + 11644473600) * 10_000_000).to_bytes(8, "little")
+            data = bytes([3, 0, 0, 0]) + stamp
+        elif value is None:
+            try:
+                with winreg.OpenKey(HIVES[hive], self.APPROVED + "\\" + approved, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY) as handle:
+                    winreg.DeleteValue(handle, name)
+            except FileNotFoundError:
+                pass
+            return
+        else:
+            data = bytes.fromhex(str(value))
+        with winreg.CreateKeyEx(HIVES[hive], self.APPROVED + "\\" + approved, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY) as handle:
+            winreg.SetValueEx(handle, name, 0, winreg.REG_BINARY, data)
+
     # -- presence ---------------------------------------------------------------------
     def path_exists(self, path: str) -> bool:
         return os.path.exists(os.path.expandvars(path))
@@ -289,6 +318,12 @@ class SandboxBackend(RealBackend):
 
     def env_set(self, name, data):
         self._write(("env", name.lower()), data)
+
+    def startup_get(self, hive, approved, name):
+        return self._read(("startup", hive, approved, name.lower()), lambda: RealBackend.startup_get(self, hive, approved, name))
+
+    def startup_set(self, hive, approved, name, value):
+        self._write(("startup", hive, approved, name.lower()), "03000000" + "00" * 8 if value == "disabled" else value)
 
     # Files: reads fall through to the real file; writes, backups and removals stay in memory.
     def file_read(self, path):
